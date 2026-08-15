@@ -177,6 +177,14 @@ def check_gdscript_structure() -> None:
                     fail(f"{path.relative_to(ROOT)}: unbalanced delimiter")
         if stack:
             fail(f"{path.relative_to(ROOT)}: unbalanced delimiter at EOF")
+        # GDScript function parameters use `=` for default values. `:=` is only
+        # valid for variable declarations/type inference and causes a parser error
+        # when used in a function signature. Catch this before Docker/Godot CI.
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            stripped = line.strip()
+            if stripped.startswith("func ") and ":=" in stripped.split("->", 1)[0]:
+                fail(f"{path.relative_to(ROOT)}:{lineno}: invalid ':=' in function parameter list; use '=' with an explicit type")
+
         for rel in preload_re.findall(text):
             if not (ROOT / rel).exists():
                 fail(f"{path.relative_to(ROOT)} preloads missing res://{rel}")

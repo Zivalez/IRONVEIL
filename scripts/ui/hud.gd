@@ -220,7 +220,7 @@ func _slider_row(label_text: String, minimum: float, maximum: float, value: floa
 	row.add_child(slider)
 	return row
 
-func _panel(position: Vector2, size: Vector2, anchor_right := false) -> PanelContainer:
+func _panel(position: Vector2, size: Vector2, anchor_right: bool = false) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.size = size
 	if anchor_right:

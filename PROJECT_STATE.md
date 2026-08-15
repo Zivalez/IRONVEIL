@@ -132,3 +132,8 @@ Corrective source changes are now staged:
 - **Target locked:** modern pixel art / HD-2D-inspired isometric 2.5D with dynamic lighting, real-time shadows, pixel particles and restrained Web-compatible post-processing.
 - **Current state:** gameplay blockout only. Primitive Box/Cylinder/Sphere/Capsule meshes are not final art and must be replaced by representative pixel assets during the Vertical Slice art pass.
 - Rendering contract: `docs/ART_DIRECTION_MODERN_PIXEL.md`.
+
+## Runtime validation update — 2026-08-16
+- Dokploy reached the Godot headless test stage after the previous mechanical-network fix.
+- Current blocking parser error in `hud.gd` was fixed (`anchor_right: bool = false`).
+- Next required validation: redeploy and confirm headless tests + Web export complete, then test the browser boot scene/gameplay loop.

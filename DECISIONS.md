@@ -110,3 +110,7 @@ This file records choices made where the blueprint/master prompt did not fix an 
 - Pixel-authored sprites/textures provide the visual identity; dynamic lighting, real-time shadows, particles and Web-compatible post-processing enhance them.
 - Public Web/Compatibility renderer remains the baseline; Forward+-only effects cannot become required visual features.
 - Current primitive meshes are explicitly classified as Phase 1 blockout, not final graphics. See `docs/ART_DIRECTION_MODERN_PIXEL.md`.
+
+## 2026-08-16 — Treat Godot parser errors as deployment blockers
+- Function default parameters must use explicit typed `=` syntax in Phase 1 code.
+- Static validation now mirrors this parser rule so the same class of mistake is caught before Dokploy.

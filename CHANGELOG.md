@@ -58,3 +58,8 @@ No room server, lobby, rate limiter, or public multiplayer transport was falsely
 - Builder now installs `fontconfig`, removing the headless `libfontconfig.so.1` warnings seen in Dokploy.
 - Locked modern pixel art / HD-2D-inspired 2.5D as the final visual direction and documented the Web/Compatibility-safe rendering contract.
 - Explicitly classified current primitive geometry as gameplay blockout rather than final art.
+
+## 2026-08-16 — HUD parser fix
+- Fixed invalid `:=` default-parameter syntax in `scripts/ui/hud.gd`; Godot requires `anchor_right: bool = false`.
+- Extended static validation to reject `:=` inside function parameter lists before Docker deployment.
+- Confirmed prior mechanical-network compile fix and fontconfig Docker fix are present.
