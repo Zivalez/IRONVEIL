@@ -44,10 +44,18 @@ func _build() -> void:
 	accent.size = Vector2(5, 720)
 	accent.color = Color(0.78, 0.47, 0.19, 1.0)
 	background.add_child(accent)
+	var brand_mark := TextureRect.new()
+	brand_mark.texture = load("res://assets/branding/ironveil_icon.png")
+	brand_mark.position = Vector2(108, 77)
+	brand_mark.size = Vector2(92, 92)
+	brand_mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	brand_mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	brand_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	background.add_child(brand_mark)
 
 	var header := VBoxContainer.new()
-	header.position = Vector2(112, 82)
-	header.size = Vector2(560, 190)
+	header.position = Vector2(218, 82)
+	header.size = Vector2(455, 190)
 	header.add_theme_constant_override("separation", 8)
 	background.add_child(header)
 	var eyebrow := Label.new()
@@ -72,7 +80,7 @@ func _build() -> void:
 	var description := Label.new()
 	description.text = "Survive. Observe. Build the systems that bring a broken world back online."
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.custom_minimum_size = Vector2(520, 50)
+	description.custom_minimum_size = Vector2(450, 50)
 	header.add_child(description)
 
 	_account_label = Label.new()

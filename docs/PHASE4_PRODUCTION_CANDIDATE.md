@@ -1,6 +1,6 @@
 # IRONVEIL Phase 4 — Production Candidate Contract
 
-**Version:** 1.0.1 source candidate  
+**Version:** 1.0.2 source candidate  
 **Blueprint:** `IRONVEIL_FINAL_GAME_BLUEPRINT_v2.md`
 
 This source advances the prior three-region MVP into a complete beginning-to-ending Web-game route. “Production candidate” is deliberate: source and service contracts pass in the artifact environment, while the Godot 4.7.1/Web runtime and deployed 2–4-client acceptance gates still require a runtime that is not installed in this environment.
@@ -72,7 +72,7 @@ python3 tools/test_persistence_contract.py
 The Docker client build remains the authoritative Godot compile, headless test, and Web export gate:
 
 ```bash
-docker build --no-cache -t ironveil:1.0.1 .
+docker build --no-cache -t ironveil:1.0.2 .
 docker compose --env-file .env.phase3 -f docker-compose.phase3.yml up --build
 ```
 

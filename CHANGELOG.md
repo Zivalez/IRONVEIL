@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.0.2-source — Original IRONVEIL branding
+
+- Added an original forged-metal IRONVEIL boot splash and application/browser icon.
+- Configured Godot to use only the IRONVEIL identity during engine startup.
+- Rebranded visible Web-loader fallback copy so engine-default product wording is not shown to players.
+- Added the brand emblem to the title screen instead of relying on engine defaults.
+- Added `/build-info` and `X-Ironveil-Build` deployment markers to distinguish a current Dokploy image from a stale build.
+
 ## 1.0.1-source — Dokploy authentication hotfix
 
 - Replaced email identity with case-insensitive nickname + password registration and login.

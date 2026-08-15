@@ -16,10 +16,12 @@ RUN rm -rf /app/.godot \
     && godot --headless --path /app --import \
     && timeout 120s godot --headless --path /app res://scenes/tests/ci_runner.tscn \
     && godot --headless --path /app --export-release "Web" /app/build/index.html \
+    && sed -i 's/Godot projects/IRONVEIL/g; s/Godot Engine/IRONVEIL/g' /app/build/index.html /app/build/index.js \
     && test -s /app/build/index.html \
     && test -s /app/build/index.js \
     && test -s /app/build/index.wasm \
-    && test -s /app/build/index.pck
+    && test -s /app/build/index.pck \
+    && ! grep -E 'Godot projects|Godot Engine' /app/build/index.html /app/build/index.js
 
 FROM nginx:alpine AS runtime
 
