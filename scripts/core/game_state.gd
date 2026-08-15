@@ -13,7 +13,7 @@ var survival: Dictionary = {}
 var objective_step := 0
 var journal_entries: Array[Dictionary] = []
 var flags: Dictionary = {}
-var mechanical_network = MechanicalNetworkClass.new()
+var mechanical_network: MechanicalNetwork = MechanicalNetworkClass.new()
 
 const OBJECTIVES := [
 	"Find something edible in the forest.",

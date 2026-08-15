@@ -127,3 +127,8 @@ Corrective source changes are now staged:
 - Web artifacts with stable `index.*` names are no longer cached as immutable.
 
 **Current gate:** redeploy this revision, hard-refresh/clear the previous site cache once, then verify the forest scene + HUD appears and complete the First Playable loop. Phase 1 remains in progress until that runtime test passes.
+
+## Visual status
+- **Target locked:** modern pixel art / HD-2D-inspired isometric 2.5D with dynamic lighting, real-time shadows, pixel particles and restrained Web-compatible post-processing.
+- **Current state:** gameplay blockout only. Primitive Box/Cylinder/Sphere/Capsule meshes are not final art and must be replaced by representative pixel assets during the Vertical Slice art pass.
+- Rendering contract: `docs/ART_DIRECTION_MODERN_PIXEL.md`.

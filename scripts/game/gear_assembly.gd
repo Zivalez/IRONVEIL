@@ -102,5 +102,5 @@ func _on_machine_tick(delta: float) -> void:
 			GameState.mechanical_network.disconnect_nodes("water_wheel", GEAR_ID)
 			GameState.mechanical_network.disconnect_nodes(GEAR_ID, BELT_ID)
 	if connected and gear_visual != null:
-		var rpm := GameState.mechanical_network.get_rpm(GEAR_ID)
+		var rpm: float = GameState.mechanical_network.get_rpm(GEAR_ID)
 		gear_visual.rotate_x(deg_to_rad((rpm / 60.0) * 360.0 * delta))

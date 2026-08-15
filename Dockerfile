@@ -1,5 +1,10 @@
 FROM barichello/godot-ci:4.7.1 AS builder
 
+# godot-ci is Ubuntu-based; fontconfig removes noisy headless system-font errors.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fontconfig \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY . .
 

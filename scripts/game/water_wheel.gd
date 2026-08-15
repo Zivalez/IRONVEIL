@@ -49,8 +49,8 @@ func _build_visual() -> void:
 func get_prompt(_player: Node) -> String:
 	if not repaired:
 		return "[F] Repair Water Wheel — requires Scrap x2"
-	var rpm := GameState.mechanical_network.get_rpm(NODE_ID)
-	var torque := GameState.mechanical_network.get_torque(NODE_ID)
+	var rpm: float = GameState.mechanical_network.get_rpm(NODE_ID)
+	var torque: float = GameState.mechanical_network.get_torque(NODE_ID)
 	return "Water Wheel ONLINE | %.0f RPM | %.0f Nm" % [rpm, torque]
 
 func interact(_player: Node) -> void:
@@ -81,5 +81,5 @@ func _on_machine_tick(delta: float) -> void:
 		repaired = bool(GameState.get_flag("water_wheel_repaired", false))
 		GameState.mechanical_network.set_source_enabled(NODE_ID, repaired)
 	if repaired and wheel_mesh != null:
-		var rpm := GameState.mechanical_network.get_rpm(NODE_ID)
+		var rpm: float = GameState.mechanical_network.get_rpm(NODE_ID)
 		wheel_mesh.rotate_x(deg_to_rad((rpm / 60.0) * 360.0 * delta))

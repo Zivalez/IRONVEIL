@@ -45,7 +45,7 @@ func _build_visual() -> void:
 	add_child(ram)
 
 func get_prompt(_player: Node) -> String:
-	var powered := GameState.mechanical_network.is_powered(PRESS_ID)
+	var powered: bool = GameState.mechanical_network.is_powered(PRESS_ID)
 	if output_plate > 0:
 		return "[F] Collect Pressed Plate x%d" % output_plate
 	if GameState.has_item(str(definition.get("input_item", "scrap")), 1):

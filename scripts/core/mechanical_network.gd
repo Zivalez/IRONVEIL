@@ -87,7 +87,7 @@ func solve() -> void:
 			queue.append(node_id)
 
 	while not queue.is_empty():
-		var current_id := queue.pop_front()
+		var current_id: String = str(queue.pop_front())
 		visit_count[current_id] = int(visit_count.get(current_id, 0)) + 1
 		if int(visit_count[current_id]) > nodes.size() + 1:
 			push_warning("Mechanical network cycle detected around %s" % current_id)

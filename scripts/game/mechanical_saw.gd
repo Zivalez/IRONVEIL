@@ -52,7 +52,7 @@ func _build_visual() -> void:
 	add_child(blade_visual)
 
 func get_prompt(_player: Node) -> String:
-	var powered := GameState.mechanical_network.is_powered(SAW_ID)
+	var powered: bool = GameState.mechanical_network.is_powered(SAW_ID)
 	if output_planks > 0:
 		return "[F] Collect Planks x%d | Saw %s" % [output_planks, "POWERED" if powered else "OFFLINE"]
 	if GameState.has_item(str(definition.get("input_item", "log")), 1):
@@ -96,9 +96,9 @@ func _on_machine_tick(delta: float) -> void:
 	else:
 		GameState.mechanical_network.disconnect_nodes("workshop_belt", SAW_ID)
 
-	var powered := GameState.mechanical_network.is_powered(SAW_ID)
+	var powered: bool = GameState.mechanical_network.is_powered(SAW_ID)
 	if powered and blade_visual != null:
-		var rpm := GameState.mechanical_network.get_rpm(SAW_ID)
+		var rpm: float = GameState.mechanical_network.get_rpm(SAW_ID)
 		blade_visual.rotate_x(deg_to_rad((rpm / 60.0) * 360.0 * delta))
 
 	if not powered or queue_logs <= 0:

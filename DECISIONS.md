@@ -103,3 +103,10 @@ This file records choices made where the blueprint/master prompt did not fix an 
 - Runtime JSON catalogs remain data-driven JSON for Phase 1, but the Web preset must explicitly include `*.json` because Godot does not treat arbitrary JSON as an automatically exported resource.
 - Fixed-name Web artifacts (`index.pck`, `index.wasm`, `index.js`) use revalidation rather than immutable caching. Content-hashed immutable caching can be reconsidered only if the export/deployment pipeline introduces hashed filenames.
 - A successful Docker build must run `scripts/tests/run_headless_tests.gd` before Web export so gameplay script parser failures are rejected during Dokploy build rather than discovered only in a browser.
+
+## 2026-08-16 — Modern pixel art is the locked visual target
+- Final world presentation is modern pixel art / HD-2D-inspired 2.5D, not raw low-poly blockout.
+- Orthographic camera and real 3D mechanical motion remain because they serve readability of automation systems.
+- Pixel-authored sprites/textures provide the visual identity; dynamic lighting, real-time shadows, particles and Web-compatible post-processing enhance them.
+- Public Web/Compatibility renderer remains the baseline; Forward+-only effects cannot become required visual features.
+- Current primitive meshes are explicitly classified as Phase 1 blockout, not final graphics. See `docs/ART_DIRECTION_MODERN_PIXEL.md`.

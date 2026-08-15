@@ -51,3 +51,10 @@ No room server, lobby, rate limiter, or public multiplayer transport was falsely
 - Added Godot headless runtime-script parsing/tests as a mandatory Docker build gate.
 - Added a minimal boot diagnostics scene that only hands control to gameplay after a player and active Camera3D exist; startup failures now display an on-canvas diagnostic instead of leaving an unexplained black canvas.
 - Removed `immutable` caching for fixed-name Godot `index.pck`, `index.wasm`, and JS assets so redeploys cannot mix new HTML with stale engine/project payloads.
+
+## 2026-08-16 — Dokploy compile fix + visual-direction lock
+- Fixed Godot 4.7 `inference_on_variant` compile failure in `MechanicalNetwork.solve()` by explicitly converting the typed queue pop result to `String`.
+- Strongly typed `GameState.mechanical_network` so downstream RPM/torque calls keep static return types.
+- Builder now installs `fontconfig`, removing the headless `libfontconfig.so.1` warnings seen in Dokploy.
+- Locked modern pixel art / HD-2D-inspired 2.5D as the final visual direction and documented the Web/Compatibility-safe rendering contract.
+- Explicitly classified current primitive geometry as gameplay blockout rather than final art.
