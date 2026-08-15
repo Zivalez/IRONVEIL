@@ -1,0 +1,14 @@
+[
+  {
+    "id": "crude_gear",
+    "name": "Crude Gear",
+    "tier": "handcraft",
+    "inputs": {
+      "scrap": 2
+    },
+    "outputs": {
+      "crude_gear": 1
+    },
+    "knowledge": "workshop_transmission"
+  }
+]

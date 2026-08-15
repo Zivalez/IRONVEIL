@@ -1,0 +1,23 @@
+[
+  {
+    "id": "primitive",
+    "name": "Primitive",
+    "unlocks": [
+      "handcraft"
+    ]
+  },
+  {
+    "id": "mechanical",
+    "name": "Mechanical",
+    "requires": [
+      "primitive"
+    ],
+    "unlocks": [
+      "water_wheel",
+      "gear",
+      "belt",
+      "mechanical_saw",
+      "mechanical_press"
+    ]
+  }
+]

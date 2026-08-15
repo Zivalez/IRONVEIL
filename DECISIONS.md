@@ -1,0 +1,98 @@
+# DECISIONS — IRONVEIL
+
+This file records choices made where the blueprint/master prompt did not fix an exact implementation value.
+
+## 2026-08-16
+
+### D-001 — Project toolchain pin
+
+**Decision:** Pin generated export/deployment configuration to Godot 4.7.1 and `barichello/godot-ci:4.7.1`.
+
+**Reason:** Keep the project, export templates and Docker builder on one exact version instead of mixing minor releases.
+
+---
+
+### D-002 — Phase 1 mechanical baseline
+
+**Decision:** Use these prototype values:
+
+- Water wheel: 32 RPM, 120 Nm.
+- Gearbox: 3:1 output speed ratio, 90% efficiency.
+- Belt: 1:1, 95% efficiency.
+- Mechanical saw: requires 70 RPM and 22 Nm.
+- Saw cycle: 2.5 seconds per log, 3 planks per log.
+
+**Reason:** The 3:1 gear makes a low-speed/high-torque wheel reach saw speed while preserving enough torque after predictable transmission losses. Values are prototype tuning, not lore constants.
+
+---
+
+### D-003 — Phase 1 interaction scheme
+
+**Decision:** Use direct keyboard/mouse prototype inputs instead of a full rebind layer in Phase 1.
+
+**Reason:** The master prompt only requires minimal graphics + audio settings in Phase 1. Full key remapping belongs to the complete Phase 2 settings system.
+
+---
+
+### D-004 — Hand-authored prototype region
+
+**Decision:** Use one handcrafted 54×54-unit forest/workshop region built from primitive meshes.
+
+**Reason:** It tests exploration → workshop → machine loop without violating the procedural-world guardrail or making the prototype depend on external art production.
+
+---
+
+### D-005 — Knowledge delivery
+
+**Decision:** Journal discoveries are automatically recorded as Observation / Hypothesis / Confirmation entries triggered by relevant actions.
+
+**Reason:** This directly implements the blueprint's Knowledge Rule and avoids external-wiki dependency.
+
+---
+
+### D-006 — Mechanical simulation ownership
+
+**Decision:** `GameState` owns the `MechanicalNetwork`; world machine nodes are adapters that present/interact with authoritative simulation state.
+
+**Reason:** Keeps simulation independent from visuals and prepares Phase 2 server authority.
+
+---
+
+### D-007 — Chunk system scope
+
+**Decision:** Phase 1 includes tier calculation only (FULL / SIMPLIFIED / STATISTICAL), not actual streaming/unloading.
+
+**Reason:** Provides the architectural seam required by the master prompt while avoiding premature world-streaming complexity.
+
+---
+
+### D-008 — UI SFX delivery
+
+**Decision:** Integrate semantic cue paths for the `mechanical` UI SFX pack and include a deterministic fetch helper; missing cue files are non-fatal.
+
+**Reason:** The implementation environment could not fetch the binary OGG assets, and the game should never fail to boot merely because optional interface audio is absent.
+
+---
+
+### D-009 — Multiplayer boundary
+
+**Decision:** Do not implement room/lobby/network transport in Phase 1. Build simulation state, ticks, chunk interest model and entity adapters so authoritative networking can attach in Phase 2.
+
+**Reason:** This follows the explicit Phase 1/Phase 2 split in the master prompt and protects the First Playable milestone from scope creep.
+
+---
+
+### D-010 — Secondary machine
+
+**Decision:** Include a simple mechanical press as a secondary powered consumer, but keep it outside the required Milestone 1 objective chain.
+
+**Reason:** The Phase 1 system list explicitly mentions a mechanical press; keeping it optional proves graph reuse without expanding the mandatory First Playable loop.
+
+---
+
+### D-011 — Revised multiplayer security boundary
+
+**Decision:** Treat the new master-prompt §4.5 security/scalability requirements as hard future phase gates, but do not create fake lobby/rate-limit/room-server implementations in Phase 1. Document and validate the contract now; implement basic room/player/resource limits in Phase 2 and require the full rate-limit/WSS/checkpoint/logging gate before public room release.
+
+**Reason:** The revised source of truth explicitly places these controls with the multiplayer stack and public-deployment gate. Adding runtime security code before the services exist would violate the no-big-bang/phase-order rules and produce untestable dead infrastructure.
+

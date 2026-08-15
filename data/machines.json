@@ -1,0 +1,54 @@
+[
+  {
+    "id": "water_wheel",
+    "name": "Water Wheel",
+    "kind": "source",
+    "base_rpm": 32.0,
+    "base_torque": 120.0,
+    "description": "High-torque, low-RPM mechanical source driven by flowing water."
+  },
+  {
+    "id": "workshop_gearbox",
+    "name": "Workshop Gearbox",
+    "kind": "gear",
+    "ratio": 3.0,
+    "efficiency": 0.9,
+    "description": "Steps RPM up 3:1 while reducing available torque."
+  },
+  {
+    "id": "workshop_belt",
+    "name": "Leather Belt Drive",
+    "kind": "belt",
+    "ratio": 1.0,
+    "efficiency": 0.95,
+    "description": "Transfers shaft rotation between workshop machines."
+  },
+  {
+    "id": "mechanical_saw",
+    "name": "Mechanical Saw",
+    "kind": "consumer",
+    "min_rpm": 70.0,
+    "min_torque": 22.0,
+    "description": "Automatically converts loaded logs into planks while mechanical power is available.",
+    "efficiency": 0.92,
+    "cycle_seconds": 2.5,
+    "input_item": "log",
+    "input_count": 1,
+    "output_item": "plank",
+    "output_count": 3
+  },
+  {
+    "id": "mechanical_press",
+    "name": "Mechanical Press",
+    "kind": "consumer",
+    "min_rpm": 55.0,
+    "min_torque": 28.0,
+    "description": "Prototype secondary consumer for the Phase 1 automation chain.",
+    "efficiency": 0.9,
+    "cycle_seconds": 3.0,
+    "input_item": "scrap",
+    "input_count": 1,
+    "output_item": "pressed_plate",
+    "output_count": 1
+  }
+]

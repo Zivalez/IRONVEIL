@@ -1,0 +1,18 @@
+[
+  {
+    "id": "hollow_vermin",
+    "name": "Hollow Vermin",
+    "health": 45.0,
+    "senses": [
+      "proximity"
+    ],
+    "drops": {
+      "scrap": 1
+    },
+    "move_speed": 1.7,
+    "detection_range": 6.5,
+    "attack_range": 1.35,
+    "attack_damage": 8.0,
+    "attack_interval": 1.5
+  }
+]

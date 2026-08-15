@@ -1,0 +1,14 @@
+[
+  {
+    "id": "wood",
+    "name": "Wood",
+    "density_class": "light",
+    "renewable": true
+  },
+  {
+    "id": "low_carbon_steel",
+    "name": "Low Carbon Steel",
+    "density_class": "heavy",
+    "renewable": false
+  }
+]

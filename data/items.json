@@ -1,0 +1,48 @@
+[
+  {
+    "id": "wild_berries",
+    "name": "Wild Berries",
+    "category": "food",
+    "max_stack": 12,
+    "description": "Dark forest berries. Edible after cautious observation.",
+    "nutrition": {
+      "hunger": 18.0,
+      "thirst": 6.0
+    }
+  },
+  {
+    "id": "scrap",
+    "name": "Machine Scrap",
+    "category": "material",
+    "max_stack": 30,
+    "description": "Reusable ferrous fragments salvaged from broken machinery."
+  },
+  {
+    "id": "log",
+    "name": "Log",
+    "category": "material",
+    "max_stack": 8,
+    "description": "A rough-cut log that can feed powered woodworking machines."
+  },
+  {
+    "id": "plank",
+    "name": "Plank",
+    "category": "material",
+    "max_stack": 24,
+    "description": "Dimensioned wood produced by the mechanical saw."
+  },
+  {
+    "id": "crude_gear",
+    "name": "Crude Gear",
+    "category": "component",
+    "max_stack": 6,
+    "description": "A hand-made gear suitable for low-precision workshop transmission."
+  },
+  {
+    "id": "pressed_plate",
+    "name": "Pressed Plate",
+    "category": "component",
+    "max_stack": 16,
+    "description": "A flattened metal plate produced by a powered mechanical press."
+  }
+]

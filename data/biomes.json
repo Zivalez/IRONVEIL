@@ -1,0 +1,15 @@
+[
+  {
+    "id": "forest_workshop_edge",
+    "name": "Green Hollow Industrial Edge",
+    "hazards": [
+      "hunger",
+      "hostile_scavenger"
+    ],
+    "resources": [
+      "wild_berries",
+      "log",
+      "scrap"
+    ]
+  }
+]
