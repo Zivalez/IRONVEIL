@@ -1,5 +1,7 @@
 extends Node3D
 
+const VisualFactory = preload("res://scripts/game/visual_factory.gd")
+
 const GEAR_ID := "workshop_gearbox"
 const BELT_ID := "workshop_belt"
 var connected := false
@@ -43,10 +45,7 @@ func _build_visual() -> void:
 	gear_visual.mesh = mesh
 	gear_visual.rotation_degrees.z = 90.0
 	gear_visual.position.y = 1.0
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.33, 0.35, 0.34)
-	mat.metallic = 0.75
-	mat.roughness = 0.48
+	var mat: StandardMaterial3D = VisualFactory.make_material("res://assets/pixel/rust_metal.png", Color(0.80, 0.74, 0.63), 0.75, 0.48)
 	gear_visual.material_override = mat
 	add_child(gear_visual)
 
@@ -55,15 +54,13 @@ func _build_visual() -> void:
 	belt_mesh.size = Vector3(3.0, 0.12, 0.24)
 	belt.mesh = belt_mesh
 	belt.position = Vector3(1.55, 1.0, 0.0)
-	var belt_mat := StandardMaterial3D.new()
-	belt_mat.albedo_color = Color(0.08, 0.07, 0.06)
-	belt_mat.roughness = 0.95
+	var belt_mat: StandardMaterial3D = VisualFactory.make_material("res://assets/pixel/wood_texture.png", Color(0.26, 0.18, 0.12), 0.0, 0.95)
 	belt.material_override = belt_mat
 	add_child(belt)
 
 func get_prompt(_player: Node) -> String:
 	if not connected:
-		return "[F] Install Crude Gear — craft with [C] using Scrap x2"
+		return "[%s] Install Crude Gear — craft with [%s] using Scrap x2" % [SettingsManager.keybind_name("interact"), SettingsManager.keybind_name("craft_gear")]
 	return "Gearbox CONNECTED | %.0f RPM | %.0f Nm" % [
 		GameState.mechanical_network.get_rpm(GEAR_ID),
 		GameState.mechanical_network.get_torque(GEAR_ID)

@@ -1,0 +1,53 @@
+services:
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      lobby:
+        condition: service_healthy
+      room-server:
+        condition: service_started
+
+  lobby:
+    build:
+      context: ./services/lobby
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      LOBBY_PORT: "8080"
+      MAX_ACTIVE_ROOMS: "${MAX_ACTIVE_ROOMS:-16}"
+      CREATE_ROOM_LIMIT_PER_MINUTE: "${CREATE_ROOM_LIMIT_PER_MINUTE:-6}"
+      PASSWORD_ATTEMPTS_PER_MINUTE: "${PASSWORD_ATTEMPTS_PER_MINUTE:-5}"
+      ROOM_TOKEN_SECRET: "${ROOM_TOKEN_SECRET:?Set ROOM_TOKEN_SECRET in .env.phase2}"
+      PUBLIC_WS_URL: "${PUBLIC_WS_URL:-ws://127.0.0.1:9081}"
+      ALLOWED_ORIGIN: "${ALLOWED_ORIGIN:-http://127.0.0.1:8080}"
+    volumes:
+      - lobby-data:/data
+    ports:
+      - "8081:8080"
+    mem_limit: 128m
+    cpus: 0.25
+
+  room-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.room
+    restart: unless-stopped
+    environment:
+      ROOM_PORT: "9081"
+      MAX_ACTIVE_ROOMS: "${MAX_ACTIVE_ROOMS:-16}"
+      ROOM_TOKEN_SECRET: "${ROOM_TOKEN_SECRET:?Set ROOM_TOKEN_SECRET in .env.phase2}"
+    volumes:
+      - room-data:/root/.local/share/godot/app_userdata/IRONVEIL
+    ports:
+      - "9081:9081"
+    mem_limit: 768m
+    cpus: 1.0
+
+volumes:
+  lobby-data:
+  room-data:

@@ -10,11 +10,17 @@ const SCRIPT_PATHS: Array[String] = [
 	"res://scripts/core/tick_manager.gd",
 	"res://scripts/data/data_registry.gd",
 	"res://scripts/core/settings_manager.gd",
+	"res://scripts/core/network_manager.gd",
 	"res://scripts/core/game_state.gd",
 	"res://scripts/core/save_manager.gd",
 	"res://scripts/core/audio_manager.gd",
 	"res://scripts/core/chunk_manager.gd",
+	"res://scripts/core/boot.gd",
+	"res://scripts/game/visual_factory.gd",
+	"res://scripts/game/post_process.gd",
+	"res://scripts/game/pixel_particle_field.gd",
 	"res://scripts/game/player.gd",
+	"res://scripts/game/remote_player.gd",
 	"res://scripts/game/camera_rig.gd",
 	"res://scripts/game/pickup.gd",
 	"res://scripts/game/workshop_sign.gd",
@@ -24,14 +30,19 @@ const SCRIPT_PATHS: Array[String] = [
 	"res://scripts/game/mechanical_press.gd",
 	"res://scripts/game/enemy.gd",
 	"res://scripts/game/occluder.gd",
-	"res://scripts/ui/hud.gd",
-	"res://scripts/core/boot.gd",
+	"res://scripts/game/bridge_repair.gd",
+	"res://scripts/game/town_npc.gd",
+	"res://scripts/game/dungeon_gate.gd",
+	"res://scripts/game/thermal_valve.gd",
+	"res://scripts/game/boss_furnace_saint.gd",
 	"res://scripts/game/main.gd",
+	"res://scripts/server/room_server.gd",
+	"res://scripts/ui/hud.gd",
 ]
-
 const SCENE_PATHS: Array[String] = [
 	"res://scenes/boot.tscn",
 	"res://scenes/main.tscn",
+	"res://scenes/server/room_server.tscn",
 ]
 
 const REQUIRED_AUTOLOADS: Array[String] = [
@@ -39,6 +50,7 @@ const REQUIRED_AUTOLOADS: Array[String] = [
 	"TickManager",
 	"ChunkManager",
 	"SettingsManager",
+	"NetworkManager",
 	"GameState",
 	"SaveManager",
 	"AudioManager",
@@ -133,6 +145,10 @@ func _test_runtime_data_registry() -> void:
 		var catalog: Dictionary = catalog_value as Dictionary
 		if catalog.is_empty():
 			_fail("DataRegistry.%s loaded empty" % property_name)
+	if (registry.call("get_enemy", "furnace_saint") as Dictionary).is_empty():
+		_fail("Phase-2 boss definition furnace_saint is missing.")
+	if (registry.call("get_biome", "ashwick_town") as Dictionary).is_empty():
+		_fail("Phase-2 Ashwick biome definition is missing.")
 
 func _test_mechanical_network() -> void:
 	var script_resource: Script = ResourceLoader.load("res://scripts/core/mechanical_network.gd") as Script
@@ -193,6 +209,12 @@ func _test_boot_scene_runtime() -> void:
 		_fail("Runtime smoke test did not create a player.")
 	if get_viewport().get_camera_3d() == null:
 		_fail("Runtime smoke test did not create an active Camera3D.")
+	if get_tree().get_nodes_in_group("boss").is_empty():
+		_fail("Phase-2 runtime smoke test did not create the Furnace Saint boss.")
+	if get_tree().get_nodes_in_group("thermal_valve").size() < 2:
+		_fail("Phase-2 runtime smoke test did not create both thermal valves.")
+	if instance.find_child("AshwickEastBridge", true, false) == null and get_tree().get_nodes_in_group("interactable").size() < 8:
+		_fail("Phase-2 runtime smoke test created too few interactable world systems.")
 
 	var game_state: Node = get_node_or_null("/root/GameState")
 	if game_state == null:

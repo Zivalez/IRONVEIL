@@ -133,3 +133,26 @@ This file records choices made where the blueprint/master prompt did not fix an 
 **Decision:** `IRONVEIL ALL-SCRIPT COMPILE GATE: PASS` and `IRONVEIL HEADLESS TESTS: PASS` may only be printed when the shared CI failure list is empty. Any failed autoload/script/scene/data/mechanical/boot assertion ends with `SceneTree.quit(1)`.
 
 **Reason:** A diagnostic PASS that coexists with Godot load errors is worse than no gate at all because it gives Dokploy and the developer a false success signal.
+
+## 2026-08-16 — Phase 2 decisions
+
+### D-P2-01 — Continuous vertical-slice corridor
+Use one connected route (Green Hollow → workshop → Ashwick → Foundry) for Phase 2 instead of loading separate region scenes. This keeps navigation and machine/world-state continuity simple while the core loop is still being proven.
+
+### D-P2-02 — Systemic first boss
+Furnace Saint has sealed armor and a dual-valve thermal-shock vulnerability window. Raw damage is intentionally ineffective outside the window. This enforces the blueprint's knowledge/world-interaction combat philosophy.
+
+### D-P2-03 — Modern Pixel hybrid representation
+Player/NPC/enemy/foliage/pickups use intentional pixel sprites. Terrain/buildings/machines use pixel-authored textures on simple 3D geometry where physical depth and machine motion matter. Post-processing enhances this authored look but may not be the sole source of pixel identity.
+
+### D-P2-04 — One Godot process may host multiple logical rooms during Phase 2
+The master prompt explicitly allows this simplification. It minimizes orchestration complexity while room counts are low. Upgrade to one process/container per room only when profiling/isolation makes it necessary.
+
+### D-P2-05 — Standard-library Python lobby
+Use `ThreadingHTTPServer` plus standard-library crypto/storage for the small lobby API. There is no framework dependency to maintain in this phase.
+
+### D-P2-06 — Private room invite identifier
+A private room is omitted from public listing and joined by a shareable room ID plus optional password. The room terminal exposes an invite-code field.
+
+### D-P2-07 — Authority claims remain conservative
+Room membership, movement acceptance and shared progression flags are server-routed in the Phase 2 candidate. Inventory, survival, full mechanical simulation and combat remain incomplete authority migrations. The repository must not call multiplayer fully server-authoritative until those systems move behind the server boundary and pass multi-client testing.

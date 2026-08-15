@@ -1,0 +1,15 @@
+FROM barichello/godot-ci:4.7.1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fontconfig \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+RUN rm -rf /app/.godot \
+    && godot --headless --path /app --import \
+    && timeout 120s godot --headless --path /app res://scenes/tests/ci_runner.tscn
+
+ENV ROOM_PORT=9081
+EXPOSE 9081
+CMD ["godot", "--headless", "--path", "/app", "res://scenes/server/room_server.tscn"]

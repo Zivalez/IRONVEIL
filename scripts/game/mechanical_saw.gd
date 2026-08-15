@@ -1,5 +1,7 @@
 extends Node3D
 
+const VisualFactory = preload("res://scripts/game/visual_factory.gd")
+
 const SAW_ID := "mechanical_saw"
 var process_accumulator := 0.0
 var queue_logs := 0
@@ -29,9 +31,7 @@ func _build_visual() -> void:
 	table_mesh.size = Vector3(2.2, 0.25, 1.2)
 	table.mesh = table_mesh
 	table.position.y = 0.75
-	var table_mat := StandardMaterial3D.new()
-	table_mat.albedo_color = Color(0.22, 0.18, 0.14)
-	table_mat.roughness = 0.9
+	var table_mat: StandardMaterial3D = VisualFactory.make_material("res://assets/pixel/wood_texture.png", Color(0.70, 0.58, 0.43), 0.0, 0.90)
 	table.material_override = table_mat
 	add_child(table)
 
@@ -44,19 +44,16 @@ func _build_visual() -> void:
 	blade_visual.mesh = blade_mesh
 	blade_visual.rotation_degrees.z = 90.0
 	blade_visual.position = Vector3(0.0, 1.15, 0.0)
-	var blade_mat := StandardMaterial3D.new()
-	blade_mat.albedo_color = Color(0.62, 0.64, 0.61)
-	blade_mat.metallic = 0.82
-	blade_mat.roughness = 0.34
+	var blade_mat: StandardMaterial3D = VisualFactory.make_material("res://assets/pixel/rust_metal.png", Color(0.90, 0.88, 0.82), 0.82, 0.34)
 	blade_visual.material_override = blade_mat
 	add_child(blade_visual)
 
 func get_prompt(_player: Node) -> String:
 	var powered: bool = GameState.mechanical_network.is_powered(SAW_ID)
 	if output_planks > 0:
-		return "[F] Collect Planks x%d | Saw %s" % [output_planks, "POWERED" if powered else "OFFLINE"]
+		return "[%s] Collect Planks x%d | Saw %s" % [SettingsManager.keybind_name("interact"), output_planks, "POWERED" if powered else "OFFLINE"]
 	if GameState.has_item(str(definition.get("input_item", "log")), 1):
-		return "[F] Load Logs into Saw | %s | queue %d" % ["POWERED" if powered else "NO POWER", queue_logs]
+		return "[%s] Load Logs into Saw | %s | queue %d" % [SettingsManager.keybind_name("interact"), "POWERED" if powered else "NO POWER", queue_logs]
 	return "Mechanical Saw | %s | queue %d | bring Logs" % ["POWERED" if powered else "OFFLINE", queue_logs]
 
 func interact(_player: Node) -> void:

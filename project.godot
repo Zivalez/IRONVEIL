@@ -10,6 +10,7 @@ DataRegistry="*res://scripts/data/data_registry.gd"
 TickManager="*res://scripts/core/tick_manager.gd"
 ChunkManager="*res://scripts/core/chunk_manager.gd"
 SettingsManager="*res://scripts/core/settings_manager.gd"
+NetworkManager="*res://scripts/core/network_manager.gd"
 GameState="*res://scripts/core/game_state.gd"
 SaveManager="*res://scripts/core/save_manager.gd"
 AudioManager="*res://scripts/core/audio_manager.gd"
@@ -22,6 +23,8 @@ window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 
 [rendering]
+textures/default_filters/use_nearest_mipmap_filter=true
+textures/canvas_textures/default_texture_filter=0
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.025, 0.03, 0.032, 1)

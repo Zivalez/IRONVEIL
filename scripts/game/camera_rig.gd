@@ -23,13 +23,11 @@ func _process(_delta: float) -> void:
 	_update_occlusion()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		var key_event: InputEventKey = event as InputEventKey
-		if key_event.pressed and not key_event.echo:
-			if key_event.keycode == KEY_Q:
-				yaw += deg_to_rad(90.0)
-			elif key_event.keycode == KEY_E:
-				yaw -= deg_to_rad(90.0)
+	if bool(SettingsManager.get_value("gameplay", "camera_rotation", true)):
+		if event.is_action_pressed("camera_left"):
+			yaw += deg_to_rad(90.0)
+		elif event.is_action_pressed("camera_right"):
+			yaw -= deg_to_rad(90.0)
 	if event is InputEventMouseButton:
 		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
 		if mouse_event.pressed:
@@ -39,8 +37,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				camera.size = minf(28.0, camera.size + 1.0)
 
 func transform_input(input: Vector2) -> Vector3:
-	var local_direction: Vector3 = Vector3(input.x, 0.0, input.y)
-	return local_direction.rotated(Vector3.UP, yaw)
+	return Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
 
 func _update_camera_transform() -> void:
 	if camera == null:

@@ -37,24 +37,40 @@ func _load_catalog(path: String) -> Dictionary:
 	if not (parsed is Array):
 		push_error("Catalog must be a JSON array: %s" % path)
 		return result
-	var records: Array = parsed
+	var records: Array = parsed as Array
 	for record_value in records:
 		if not (record_value is Dictionary):
 			continue
-		var record: Dictionary = record_value
+		var record: Dictionary = record_value as Dictionary
 		if not record.has("id"):
 			continue
 		result[str(record["id"])] = record
 	return result
 
 func get_item(item_id: String) -> Dictionary:
-	return items.get(item_id, {})
+	return _get_record(items, item_id)
 
 func get_recipe(recipe_id: String) -> Dictionary:
-	return recipes.get(recipe_id, {})
+	return _get_record(recipes, recipe_id)
 
 func get_machine(machine_id: String) -> Dictionary:
-	return machines.get(machine_id, {})
+	return _get_record(machines, machine_id)
+
+func get_material(material_id: String) -> Dictionary:
+	return _get_record(materials, material_id)
+
+func get_enemy(enemy_id: String) -> Dictionary:
+	return _get_record(enemies, enemy_id)
+
+func get_biome(biome_id: String) -> Dictionary:
+	return _get_record(biomes, biome_id)
+
+func get_technology(technology_id: String) -> Dictionary:
+	return _get_record(technologies, technology_id)
+
+func _get_record(catalog: Dictionary, record_id: String) -> Dictionary:
+	var value: Variant = catalog.get(record_id, {})
+	return (value as Dictionary).duplicate(true) if value is Dictionary else {}
 
 func display_name(item_id: String) -> String:
 	var item: Dictionary = get_item(item_id)

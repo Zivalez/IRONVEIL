@@ -8,3 +8,6 @@ build
 .DS_Store
 __pycache__
 *.pyc
+.env
+.env.*
+!.env.phase2.example

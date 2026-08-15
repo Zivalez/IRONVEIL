@@ -11,5 +11,30 @@
       "log",
       "scrap"
     ]
+  },
+  {
+    "id": "ashwick_town",
+    "name": "Ashwick",
+    "hazards": [
+      "abandoned_infrastructure"
+    ],
+    "resources": [
+      "spring_water",
+      "scrap",
+      "plank"
+    ]
+  },
+  {
+    "id": "foundry_vault",
+    "name": "Ashwick Foundry Vault",
+    "hazards": [
+      "hollow_stalker",
+      "thermal_pressure",
+      "furnace_saint"
+    ],
+    "resources": [
+      "scrap",
+      "pressed_plate"
+    ]
   }
 ]

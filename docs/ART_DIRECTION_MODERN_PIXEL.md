@@ -64,3 +64,7 @@ Before Phase 2 Vertical Slice is considered visually presentable, replace the vi
 ## Visual quality bar
 
 A screenshot without UI should immediately read as intentional pixel art, not as "Godot primitive meshes with a pixel filter". Post-processing is enhancement, not a substitute for authored pixel assets.
+
+## Phase 2 implementation status
+
+Phase 2 now includes a representative authored pixel asset set for the critical route plus pixel-textured 3D world/machinery, real-time lights/shadows, manual pixel dust/steam fields and a Compatibility-safe screen shader. This establishes the rendering pipeline and visual grammar; these development assets are **not** represented as Sea-of-Stars-level final production art.

@@ -44,5 +44,23 @@
     "category": "component",
     "max_stack": 16,
     "description": "A flattened metal plate produced by a powered mechanical press."
+  },
+  {
+    "id": "spring_water",
+    "name": "Spring Water",
+    "category": "food",
+    "max_stack": 8,
+    "description": "Clean water collected from a cold Ashwick spring.",
+    "nutrition": {
+      "hunger": 0.0,
+      "thirst": 32.0
+    }
+  },
+  {
+    "id": "bandage",
+    "name": "Field Bandage",
+    "category": "medical",
+    "max_stack": 6,
+    "description": "A clean wrap that restores a small amount of health when used."
   }
 ]

@@ -1,4 +1,19 @@
-# CHANGELOG — IRONVEIL
+# CHANGELOG
+
+## 2026-08-16 — Phase 2 Vertical Slice candidate
+
+- Expanded the First Playable into Green Hollow → Workshop → Ashwick → Foundry Vault → Furnace Saint.
+- Added bridge repair, Archivist Mara, Foundry gate, thermal valves and systemic boss encounter.
+- Added representative Modern Pixel/Hi-Bit sprite and texture set, pixel-aware materials, dust/steam and Web-compatible post-processing shader.
+- Added full Phase 2 settings categories and remappable keybinds; interaction prompts now reflect remapped controls.
+- Added `NetworkManager`, co-op room terminal, remote player rendering and server-routed shared progression flags.
+- Added Python lobby service with public/private rooms, password hashing/validation, sanitization, rate limiting, active-room cap and signed join tickets.
+- Added headless Godot room server, periodic checkpointing, structured logs and Phase 2 Compose topology with resource ceilings/restart policies.
+- Added private-room join by room ID/invite code.
+- Added `tools/test_lobby_contract.py`; local HTTP contract test passes.
+- Extended static/Godot CI contracts to include Phase 2 data, scripts, scenes, resources and world invariants.
+- Documented Phase 2 vertical-slice, network authority boundary and runtime acceptance debt.
+
 
 ## 2026-08-16 — Phase 0 + Phase 1 implementation session
 

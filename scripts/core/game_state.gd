@@ -5,6 +5,9 @@ signal survival_changed(survival: Dictionary)
 signal objective_changed(step: int, text: String)
 signal journal_changed(entries: Array)
 signal notification(message: String, kind: String)
+signal boss_changed(name: String, health: float, max_health: float, vulnerable: bool)
+signal boss_cleared()
+signal flag_changed(flag: String, value: Variant)
 
 const MechanicalNetworkClass = preload("res://scripts/core/mechanical_network.gd")
 
@@ -14,20 +17,28 @@ var objective_step: int = 0
 var journal_entries: Array[Dictionary] = []
 var flags: Dictionary = {}
 var mechanical_network: MechanicalNetwork = MechanicalNetworkClass.new()
+var _applying_remote_flag: bool = false
 
-const OBJECTIVES := [
+const OBJECTIVES: Array[String] = [
 	"Find something edible in the forest.",
 	"Locate the abandoned workshop.",
 	"Repair the workshop water wheel (needs 2 Scrap).",
 	"Craft and connect a Crude Gear (2 Scrap).",
 	"Load Logs into the mechanical saw.",
 	"Keep the wheel powered and let the saw make Planks automatically.",
-	"FIRST PLAYABLE COMPLETE — the workshop lives again.",
+	"Repair Ashwick's east bridge (needs 6 Planks).",
+	"Speak with Archivist Mara in Ashwick.",
+	"Use the mechanical press to produce 2 Pressed Plates.",
+	"Open the Foundry Vault gate (2 Plates + 4 Planks).",
+	"Activate both thermal relief valves inside the Foundry.",
+	"Defeat the Furnace Saint while its armor is thermally vulnerable.",
+	"VERTICAL SLICE COMPLETE — Ashwick's Foundry is silent again.",
 ]
 
 func _ready() -> void:
 	TickManager.farming_tick.connect(_on_survival_tick)
 	TickManager.machine_tick.connect(_on_machine_tick)
+	NetworkManager.shared_flag_received.connect(_on_remote_shared_flag)
 	new_game()
 
 func new_game() -> void:
@@ -42,20 +53,20 @@ func new_game() -> void:
 	journal_entries = []
 	flags = {}
 	mechanical_network.clear()
+	clear_boss()
 	_emit_all()
 
 func _on_machine_tick(_delta: float) -> void:
 	mechanical_network.solve()
 
 func _on_survival_tick(delta: float) -> void:
-	survival["hunger"] = maxf(float(survival.get("hunger", 0.0)) - 0.35 * delta, 0.0)
-	survival["thirst"] = maxf(float(survival.get("thirst", 0.0)) - 0.55 * delta, 0.0)
-
+	var harsh_multiplier: float = 1.45 if bool(SettingsManager.get_value("gameplay", "harsh_climate", false)) else 1.0
+	survival["hunger"] = maxf(float(survival.get("hunger", 0.0)) - 0.35 * delta * harsh_multiplier, 0.0)
+	survival["thirst"] = maxf(float(survival.get("thirst", 0.0)) - 0.55 * delta * harsh_multiplier, 0.0)
 	if float(survival["hunger"]) <= 0.0 or float(survival["thirst"]) <= 0.0:
 		survival["health"] = maxf(float(survival.get("health", 100.0)) - 2.0 * delta, 0.0)
 	elif float(survival["hunger"]) > 65.0 and float(survival["thirst"]) > 65.0:
 		survival["health"] = minf(float(survival.get("health", 100.0)) + 0.25 * delta, float(survival.get("max_health", 100.0)))
-
 	survival_changed.emit(survival.duplicate(true))
 
 func add_item(item_id: String, quantity: int = 1) -> void:
@@ -63,6 +74,8 @@ func add_item(item_id: String, quantity: int = 1) -> void:
 		return
 	inventory[item_id] = int(inventory.get(item_id, 0)) + quantity
 	inventory_changed.emit(inventory.duplicate(true))
+	if item_id == "pressed_plate" and objective_step == 8 and has_item("pressed_plate", 2):
+		advance_objective(9)
 
 func remove_item(item_id: String, quantity: int = 1) -> bool:
 	if quantity <= 0:
@@ -87,7 +100,7 @@ func consume_food(item_id: String) -> bool:
 		return false
 	if not remove_item(item_id, 1):
 		return false
-	var nutrition: Dictionary = nutrition_value
+	var nutrition: Dictionary = nutrition_value as Dictionary
 	survival["hunger"] = minf(100.0, float(survival["hunger"]) + float(nutrition.get("hunger", 0.0)))
 	survival["thirst"] = minf(100.0, float(survival["thirst"]) + float(nutrition.get("thirst", 0.0)))
 	survival_changed.emit(survival.duplicate(true))
@@ -103,7 +116,7 @@ func can_craft(recipe_id: String) -> bool:
 	var inputs_value: Variant = recipe.get("inputs", {})
 	if not (inputs_value is Dictionary):
 		return false
-	var inputs: Dictionary = inputs_value
+	var inputs: Dictionary = inputs_value as Dictionary
 	for item_id_variant in inputs:
 		var item_id: String = str(item_id_variant)
 		if not has_item(item_id, int(inputs[item_id_variant])):
@@ -120,18 +133,14 @@ func craft(recipe_id: String) -> bool:
 	if not (inputs_value is Dictionary) or not (outputs_value is Dictionary):
 		notify("Recipe data is invalid: %s." % recipe_id, "error")
 		return false
-	var inputs: Dictionary = inputs_value
-	var outputs: Dictionary = outputs_value
+	var inputs: Dictionary = inputs_value as Dictionary
+	var outputs: Dictionary = outputs_value as Dictionary
 	for item_id_variant in inputs:
 		remove_item(str(item_id_variant), int(inputs[item_id_variant]))
 	for item_id_variant in outputs:
 		add_item(str(item_id_variant), int(outputs[item_id_variant]))
 	notify("Crafted %s." % str(recipe.get("name", recipe_id)), "success")
-	add_journal(
-		"Crafting: %s" % str(recipe.get("name", recipe_id)),
-		"Confirmation",
-		"Scrap can be shaped into a crude transmission gear with hand tools."
-	)
+	add_journal("Crafting: %s" % str(recipe.get("name", recipe_id)), "Confirmation", "Field materials can be shaped into repeatable components when the right process is known.")
 	return true
 
 func advance_objective(new_step: int) -> void:
@@ -153,12 +162,31 @@ func add_journal(title: String, stage: String, body: String) -> void:
 
 func set_flag(flag: String, value: Variant = true) -> void:
 	flags[flag] = value
+	flag_changed.emit(flag, value)
+	var shared_flags: Array[String] = [
+		"bridge_repaired", "mara_spoken", "foundry_gate_open",
+		"thermal_valve_a", "thermal_valve_b"
+	]
+	if shared_flags.has(flag) and not _applying_remote_flag and NetworkManager.is_online() and not NetworkManager.is_server_mode():
+		NetworkManager.submit_shared_flag(flag, value)
+
+func _on_remote_shared_flag(flag: String, value: Variant) -> void:
+	_applying_remote_flag = true
+	flags[flag] = value
+	flag_changed.emit(flag, value)
+	_applying_remote_flag = false
 
 func get_flag(flag: String, fallback: Variant = false) -> Variant:
 	return flags.get(flag, fallback)
 
 func notify(message: String, kind: String = "info") -> void:
 	notification.emit(message, kind)
+
+func update_boss(name: String, health: float, max_health: float, vulnerable: bool) -> void:
+	boss_changed.emit(name, health, max_health, vulnerable)
+
+func clear_boss() -> void:
+	boss_cleared.emit()
 
 func snapshot() -> Dictionary:
 	return {
@@ -174,24 +202,19 @@ func restore(data: Dictionary) -> void:
 	var inventory_value: Variant = data.get("inventory", {})
 	if inventory_value is Dictionary:
 		inventory = (inventory_value as Dictionary).duplicate(true)
-
 	var survival_value: Variant = data.get("survival", survival)
 	if survival_value is Dictionary:
 		survival = (survival_value as Dictionary).duplicate(true)
-
 	objective_step = clampi(int(data.get("objective_step", 0)), 0, OBJECTIVES.size() - 1)
-
 	journal_entries.clear()
 	var journal_value: Variant = data.get("journal_entries", [])
 	if journal_value is Array:
 		for entry_value in journal_value:
 			if entry_value is Dictionary:
 				journal_entries.append((entry_value as Dictionary).duplicate(true))
-
 	var flags_value: Variant = data.get("flags", {})
 	if flags_value is Dictionary:
 		flags = (flags_value as Dictionary).duplicate(true)
-
 	var network_value: Variant = data.get("mechanical_network", {})
 	if network_value is Dictionary:
 		mechanical_network.from_dict(network_value as Dictionary)

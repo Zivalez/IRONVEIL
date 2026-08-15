@@ -1,179 +1,232 @@
 # IRONVEIL
 
-2.5D isometric survival/engineering RPG prototype built with Godot 4.x.
+**IRONVEIL** is a 2.5D isometric survival/engineering RPG built with Godot 4.x. Progression is knowledge-driven: observe systems, understand them, build working infrastructure, then automate it.
 
-> **Current repository phase:** Phase 1 — Prototype / First Playable implementation.  
-> Phase 2+ is intentionally not implemented until the Phase 1 runtime acceptance checklist passes, per `IRONVEIL_MASTER_PROMPT.md`.
+> **Current repository phase:** **Phase 2 — Vertical Slice / runtime candidate**.  
+> Phase 1 Web First Playable has been reported running by the project owner. Phase 2 source now expands the playable route and introduces the co-op stack, but Phase 2 is **not accepted as complete** until the Godot/Dokploy runtime and 2–4 player tests in `PROJECT_STATE.md` pass.
 
-## First Playable Loop
+## Phase 2 Vertical Slice
 
 ```text
-Spawn in forest
-→ find/eat food
-→ discover abandoned workshop
-→ collect scrap
+Green Hollow forest
+→ survive + collect field resources
+→ abandoned workshop
 → repair water wheel
-→ craft + install crude gear
-→ load logs into mechanical saw
-→ wheel torque flows through gear/belt
-→ saw automatically produces planks
+→ install gear/belt transmission
+→ automate plank production
+→ repair Ashwick east bridge
+→ enter Ashwick
+→ speak with Archivist Mara
+→ use mechanical press for 2 plates
+→ repair/open Foundry Vault
+→ open both thermal relief valves
+→ thermal-shock Furnace Saint armor
+→ defeat Furnace Saint during the vulnerability window
 ```
 
-The mechanical chain is simulation-backed. The saw does not use a repeated manual craft action: it only processes while its graph node receives enough RPM and torque.
+The boss is intentionally systemic: sealed armor reduces direct attacks to negligible damage. The Foundry pressure system creates the real combat opening.
+
+## Visual Direction
+
+Phase 2 establishes the **Modern Pixel Art / Hi-Bit / HD-2D-inspired** rendering direction:
+
+- authored pixel sprites for player, enemies, NPC, vegetation and pickups;
+- nearest-neighbor pixel filtering;
+- pixel textures on 3D terrain/buildings/machinery;
+- real 3D machinery so gears/wheels/belts remain mechanically readable;
+- dynamic lights and real-time shadows;
+- pixel dust/steam fields;
+- Web-safe screen shader with restrained quantization, dithering, vignette and colorblind transforms.
+
+The included art is a representative development set, **not final production-quality art**. The visual contract is in `docs/ART_DIRECTION_MODERN_PIXEL.md`.
 
 ## Controls
+
+All keyboard controls can be rebound from Settings → Controls. Defaults:
 
 | Input | Action |
 |---|---|
 | WASD | Move |
 | Shift | Sprint |
 | F | Interact |
+| Space | Melee attack |
 | Q / E | Rotate isometric camera 90° |
 | Mouse wheel | Zoom |
-| 1 | Eat Wild Berries |
+| 1 | Quick consume |
 | C | Craft Crude Gear |
-| Space | Basic melee attack |
 | J | Field Journal |
+| N | Co-op room terminal |
 | Esc | Settings |
 | H | Help |
-| F5 | Save |
-| F9 | Load |
+| F5 / F9 | Save / Load |
+
+## Settings
+
+Phase 2 exposes all master-prompt categories:
+
+- **Graphics:** resolution/window mode persistence, VSync, quality/shadow fields, modern-pixel post-processing toggles, camera zoom, UI scale.
+- **Audio:** separate master/music/SFX/ambient volumes and mutes.
+- **Controls:** remappable keybinds and mouse sensitivity.
+- **Gameplay:** HUD, camera rotation and current world modifiers.
+- **Accessibility:** text/UI scale, colorblind transform and subtitles toggle.
+- **Network:** display name, lobby API URL and region field.
+
+## Architecture
+
+```text
+                    ┌──────────────────────────┐
+                    │  Godot Web/Native Client │
+                    │ input + rendering + HUD  │
+                    └─────────────┬────────────┘
+                                  │ HTTPS lobby / WebSocket room
+                    ┌─────────────┴────────────┐
+                    │                          │
+          ┌─────────▼─────────┐      ┌────────▼──────────┐
+          │ Lobby Service     │      │ Godot Room Server │
+          │ create/list/join  │      │ WebSocket peer    │
+          │ password/rate cap │      │ room state/checkpt│
+          └───────────────────┘      └───────────────────┘
+
+Single-player simulation remains:
+Input/UI → gameplay adapters → GameState → TickManager / MechanicalNetwork / DataRegistry / ChunkManager
+```
+
+The Phase 2 networking implementation currently provides authenticated room membership, server-clamped movement replication, roster replication and shared vertical-slice progression flags. **Inventory, survival, general enemy simulation and the full machine simulation have not yet all been migrated to server authority; Furnace Saint health/vulnerability is server-owned in co-op**, so public competitive/anti-cheat claims are explicitly out of scope until that authority migration and desync testing are finished.
 
 ## Requirements
 
-- Godot **4.7.1** with export templates for local/native/Web exports.
-- Python 3 for repository validation and the optional UI-SFX fetch helper.
-- Docker for the Web container build.
+- Godot **4.7.1** + matching export templates.
+- Python 3.11+ for repository/lobby validation.
+- Docker / Docker Compose for container tests and Phase 2 service topology.
 
-The project uses Godot's **GL Compatibility** renderer because Web is the public deployment target.
-
-## Run in Godot
-
-```bash
-godot --path .
-```
-
-Or open `project.godot` in the Godot editor and run the main scene.
+The public Web client uses Godot **GL Compatibility** rendering.
 
 ## Validate Source
+
+Static/data/deployment contract:
 
 ```bash
 python3 tools/validate_project.py
 ```
 
-Run the same Godot gate used by Docker when Godot is installed:
+Lobby HTTP/security contract:
+
+```bash
+python3 tools/test_lobby_contract.py
+```
+
+Godot project-aware CI gate:
 
 ```bash
 godot --headless --path . --import
 godot --headless --path . res://scenes/tests/ci_runner.tscn
 ```
 
-The CI runner is a **normal project scene**, not a `godot --script` entry point. That distinction is intentional: project autoloads (`TickManager`, `GameState`, `SettingsManager`, `DataRegistry`, etc.) are initialized before normal scenes, matching the lifecycle used by the actual game. The runner then loads every runtime script, validates all catalogs, tests the mechanical solver, and instantiates `boot.tscn` end-to-end. Any failure exits Godot with code 1, so Docker/Dokploy stops before Web export.
+The Godot gate runs as a normal project scene so all autoloads are initialized exactly as they are for the exported game. It checks autoloads, runtime scripts/scenes, data catalogs, the mechanical solver and the actual `boot.tscn` path.
 
-## UI SFX
-
-The UI audio integration targets the CC0 audio files from the `mechanical` pack in `romainsimon/uisfx`.
-Binary audio is intentionally not vendored by the generated source package in environments where the upstream binaries cannot be fetched.
-
-With internet access:
+## Run Single Player
 
 ```bash
-python3 tools/fetch_ui_sfx.py
+godot --path .
 ```
 
-Expected destination:
+Or open `project.godot` and run the project.
+
+## Build Web Client
+
+```bash
+docker build --no-cache -t ironveil:phase2-client .
+docker run --rm -p 8080:80 ironveil:phase2-client
+```
+
+This root `Dockerfile` intentionally remains usable as a normal **Dokploy Application** for the single-player/Web client.
+
+## Run Phase 2 Co-op Stack Locally
+
+Create environment file:
+
+```bash
+cp .env.phase2.example .env.phase2
+```
+
+Replace `ROOM_TOKEN_SECRET` with a long random value, then:
+
+```bash
+docker compose --env-file .env.phase2 -f docker-compose.phase2.yml up --build
+```
+
+Default local endpoints:
 
 ```text
-audio/ui/mechanical/
+Web client  http://127.0.0.1:8080
+Lobby API   http://127.0.0.1:8081
+Room WS     ws://127.0.0.1:9081
 ```
 
-The game safely runs without these optional UI cue files; `AudioManager` simply skips a missing cue.
+Open Settings → Network and ensure Lobby API URL is `http://127.0.0.1:8081`. Press **N** for the room terminal.
+
+### Public Dokploy topology
+
+For public HTTPS co-op, deploy three endpoints/services:
+
+```text
+client  → https://<game-domain>
+lobby   → https://<lobby-domain>
+room    → wss://<room-domain>
+```
+
+Configure:
+
+```text
+ROOM_TOKEN_SECRET=<strong random secret shared by lobby + room server>
+PUBLIC_WS_URL=wss://<room-domain>
+ALLOWED_ORIGIN=https://<game-domain>
+MAX_ACTIVE_ROOMS=<profiled VPS capacity>
+```
+
+The lobby can be exposed as a separate Dokploy Application or as the `lobby` service in Dokploy Compose. The room server must have WebSocket upgrade support and long-lived proxy timeouts. CPU/RAM limits are present in `docker-compose.phase2.yml` as initial testing ceilings, not final production sizing.
+
+**Do not expose co-op publicly yet just because containers start.** Complete `docs/PHASE2_SECURITY_SCALABILITY.md` and the 2–4 client runtime checklist first.
 
 ## Native Exports
-
-Presets are provided for Windows and Linux.
 
 ```bash
 godot --headless --path . --export-release "Windows Desktop" build/IRONVEIL.exe
 godot --headless --path . --export-release "Linux" build/IRONVEIL.x86_64
 ```
 
-## Web Export
+## UI SFX
+
+The project targets the CC0 `mechanical` pack from `romainsimon/uisfx` for interface cues. If assets are not vendored:
 
 ```bash
-godot --headless --path . --export-release "Web" build/index.html
+python3 tools/fetch_ui_sfx.py
 ```
 
-Web threading is disabled for Phase 1 to avoid SharedArrayBuffer / COOP / COEP requirements until profiling proves it is necessary.
-
-## Docker / Dokploy
-
-A multi-stage Docker build exports the Web build in the builder stage and serves it through nginx.
-
-```bash
-docker build -t ironveil:phase1 .
-docker run --rm -p 8080:80 ironveil:phase1
-```
-
-Open `http://localhost:8080`.
-
-For **Phase 1**, create a Dokploy **Application**, point it at this repository, select the root `Dockerfile`, and expose container port 80. Do not use Compose yet: the room server/lobby services required for a real multi-service topology do not exist in this phase.
-
-When Phase 2 implements the dedicated room server and lobby, deployment becomes multi-service and may move to Dokploy Compose or separately managed Applications. Public co-op additionally must satisfy the security/scalability gate below.
-
-## Multiplayer Security / Public Release Gate
-
-The revised master prompt makes public co-op conditional on explicit capacity and abuse controls. See:
-
-- `docs/PHASE2_NETWORK_ARCHITECTURE.md`
-- `docs/PHASE2_SECURITY_SCALABILITY.md`
-
-Key future requirements are server-enforced max 4 players/room, configurable room capacity, per-room CPU/RAM limits, rate limiting, server-side input sanitization, WSS through Dokploy/Traefik, crash restart + checkpoint recovery, and operational logging. These are **not claimed as implemented in Phase 1**.
-
-## Architecture at a Glance
-
-```text
-Input / UI / Rendering
-        │
-        ▼
-Gameplay adapters (Player, Workshop, Machines)
-        │
-        ▼
-GameState ───── SaveManager
-   │
-   ├── TickManager
-   ├── MechanicalNetwork graph solver
-   ├── DataRegistry → JSON definitions
-   └── ChunkManager → FULL / SIMPLIFIED / STATISTICAL tiers
-```
-
-Simulation state is kept separate from visual nodes so Phase 2 can move authoritative simulation to a dedicated server rather than rewriting gameplay from scratch.
+Missing optional UI cue files do not block gameplay.
 
 ## Repository Layout
 
 ```text
-scenes/                 Entry scenes
-scripts/core/            Simulation, state, save, settings, tick/LOD systems
-scripts/data/            Data catalog loader
-scripts/game/            Player/world/machine adapters
-scripts/ui/              HUD/settings/journal UI
-scripts/tests/           Headless logic checks
-data/                    Data-driven item/recipe/machine/etc definitions
-audio/ui/mechanical/     Optional UI SFX assets
-docs/                    Architecture and test documentation
-tools/                   Validation and asset helper scripts
-build/                   Generated exports (gitignored except .gitkeep)
+assets/pixel/             Phase-2 representative pixel-art set
+data/                     Data-driven catalogs
+scenes/                   boot/main/test/server scenes
+scripts/core/             state, ticks, networking, save, settings, solvers
+scripts/game/             world gameplay adapters and vertical-slice systems
+scripts/server/           headless room server
+scripts/ui/               HUD/settings/journal/co-op terminal
+services/lobby/           Python lobby/matchmaking service
+shaders/                  Web-compatible modern-pixel post processing
+docs/                     architecture, visual, security and test contracts
+tools/                    validators and local contract tests
 ```
 
-## Source-of-Truth Documents
+## Source of Truth
 
-- `IRONVEIL_GAME_BLUEPRINT.md` — game design.
-- `IRONVEIL_MASTER_PROMPT.md` — process, locked technical decisions, roadmap and acceptance rules.
-- `PROJECT_STATE.md` — factual current state.
-- `DECISIONS.md` — technical/design decisions made while implementing.
-- `CHANGELOG.md` — work log.
-- `docs/PHASE2_SECURITY_SCALABILITY.md` — mandatory capacity/anti-abuse/WSS/resilience contract for future public co-op.
+- `IRONVEIL_GAME_BLUEPRINT.md`
+- `IRONVEIL_MASTER_PROMPT.md`
+- `PROJECT_STATE.md`
+- `DECISIONS.md`
+- `CHANGELOG.md`
 
-## Important Scope Rule
-
-Do **not** start Phase 2 implementation until every Phase 1 runtime acceptance item in `PROJECT_STATE.md` has been verified in a real Godot/native/Web runtime. Static source validation is not a substitute for playing the First Playable end-to-end.
+Do not begin Phase 3 until Phase 2 is verified end-to-end in solo and 2–4 player co-op and the vertical slice can be completed through Furnace Saint without a crash or major desync.

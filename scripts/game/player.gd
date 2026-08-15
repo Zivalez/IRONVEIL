@@ -2,12 +2,16 @@ extends CharacterBody3D
 
 signal interaction_prompt_changed(text: String)
 
+const VisualFactory = preload("res://scripts/game/visual_factory.gd")
+
 var camera_rig: Node
 var move_speed: float = 5.2
 var sprint_speed: float = 7.0
 var attack_cooldown: float = 0.0
 var current_prompt: String = ""
 var _gravity: float = 20.0
+var _network_accumulator: float = 0.0
+var _sprite: Sprite3D
 
 func _ready() -> void:
 	add_to_group("players")
@@ -18,83 +22,59 @@ func _ready() -> void:
 	GameState.survival_changed.connect(_on_survival_changed)
 
 func _build_visual() -> void:
-	var mesh := MeshInstance3D.new()
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.42
-	capsule.height = 1.6
-	mesh.mesh = capsule
-	mesh.position.y = 0.8
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.36, 0.48, 0.48)
-	material.roughness = 0.82
-	mesh.material_override = material
-	add_child(mesh)
-
+	_sprite = VisualFactory.make_sprite("res://assets/pixel/player.png", 0.04, true)
+	_sprite.position.y = 0.95
+	add_child(_sprite)
 	var collision := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
-	shape.radius = 0.42
-	shape.height = 1.6
+	shape.radius = 0.38
+	shape.height = 1.45
 	collision.shape = shape
-	collision.position.y = 0.8
+	collision.position.y = 0.75
 	add_child(collision)
 
 func _on_simulation_tick(delta: float) -> void:
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
-
-	var input: Vector2 = Vector2.ZERO
-	if Input.is_key_pressed(KEY_A):
-		input.x -= 1.0
-	if Input.is_key_pressed(KEY_D):
-		input.x += 1.0
-	if Input.is_key_pressed(KEY_W):
-		input.y -= 1.0
-	if Input.is_key_pressed(KEY_S):
-		input.y += 1.0
-	input = input.normalized()
-
+	var input: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var world_dir: Vector3 = Vector3(input.x, 0.0, input.y)
 	if camera_rig != null and camera_rig.has_method("transform_input"):
 		world_dir = camera_rig.transform_input(input).normalized()
-
 	var hunger: float = float(GameState.survival.get("hunger", 100.0))
 	var thirst: float = float(GameState.survival.get("thirst", 100.0))
 	var fatigue_factor: float = 0.62 if hunger < 15.0 or thirst < 15.0 else 1.0
-	var speed: float = sprint_speed if Input.is_key_pressed(KEY_SHIFT) and hunger > 20.0 else move_speed
+	var speed: float = sprint_speed if Input.is_action_pressed("sprint") and hunger > 20.0 else move_speed
 	speed *= fatigue_factor
-
 	velocity.x = world_dir.x * speed
 	velocity.z = world_dir.z * speed
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	else:
 		velocity.y = -0.1
-
 	move_and_slide()
 	_update_prompt()
+	_network_accumulator += delta
+	if _network_accumulator >= 0.10:
+		_network_accumulator = 0.0
+		NetworkManager.submit_local_player_state(global_position, rotation.y)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey):
-		return
-	var key_event: InputEventKey = event as InputEventKey
-	if not key_event.pressed or key_event.echo:
-		return
-	match key_event.keycode:
-		KEY_F:
-			_interact()
-		KEY_SPACE:
-			_attack()
-		KEY_1:
-			GameState.consume_food("wild_berries")
-		KEY_C:
-			GameState.craft("crude_gear")
-		KEY_F5:
-			SaveManager.save_game(self)
-		KEY_F9:
-			SaveManager.load_game(self)
+	if event.is_action_pressed("interact"):
+		_interact()
+	elif event.is_action_pressed("attack"):
+		_attack()
+	elif event.is_action_pressed("eat_quick"):
+		if not GameState.consume_food("wild_berries"):
+			GameState.consume_food("spring_water")
+	elif event.is_action_pressed("craft_gear"):
+		GameState.craft("crude_gear")
+	elif event.is_action_pressed("save"):
+		SaveManager.save_game(self)
+	elif event.is_action_pressed("load"):
+		SaveManager.load_game(self)
 
 func _nearest_interactable() -> Node:
 	var nearest: Node = null
-	var nearest_distance: float = 2.7
+	var nearest_distance: float = 2.8
 	for node_value in get_tree().get_nodes_in_group("interactable"):
 		if not (node_value is Node3D):
 			continue
@@ -127,7 +107,7 @@ func _attack() -> void:
 		return
 	attack_cooldown = 0.55
 	var closest: Node3D = null
-	var closest_distance: float = 2.1
+	var closest_distance: float = 2.2
 	for node_value in get_tree().get_nodes_in_group("enemy"):
 		if not (node_value is Node3D):
 			continue

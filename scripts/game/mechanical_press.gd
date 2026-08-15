@@ -1,5 +1,7 @@
 extends Node3D
 
+const VisualFactory = preload("res://scripts/game/visual_factory.gd")
+
 const PRESS_ID := "mechanical_press"
 var queue_scrap := 0
 var output_plate := 0
@@ -29,10 +31,7 @@ func _build_visual() -> void:
 	frame_mesh.size = Vector3(1.4, 2.1, 1.2)
 	frame.mesh = frame_mesh
 	frame.position.y = 1.05
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.20, 0.23, 0.22)
-	mat.metallic = 0.7
-	mat.roughness = 0.6
+	var mat: StandardMaterial3D = VisualFactory.make_material("res://assets/pixel/rust_metal.png", Color(0.72, 0.70, 0.64), 0.70, 0.60)
 	frame.material_override = mat
 	add_child(frame)
 
@@ -47,9 +46,9 @@ func _build_visual() -> void:
 func get_prompt(_player: Node) -> String:
 	var powered: bool = GameState.mechanical_network.is_powered(PRESS_ID)
 	if output_plate > 0:
-		return "[F] Collect Pressed Plate x%d" % output_plate
+		return "[%s] Collect Pressed Plate x%d" % [SettingsManager.keybind_name("interact"), output_plate]
 	if GameState.has_item(str(definition.get("input_item", "scrap")), 1):
-		return "[F] Load Scrap into Press | %s" % ("POWERED" if powered else "OFFLINE")
+		return "[%s] Load Scrap into Press | %s" % [SettingsManager.keybind_name("interact"), "POWERED" if powered else "OFFLINE"]
 	return "Mechanical Press | %s | optional prototype machine" % ("POWERED" if powered else "OFFLINE")
 
 func interact(_player: Node) -> void:

@@ -1,5 +1,7 @@
 extends Node3D
 
+const VisualFactory = preload("res://scripts/game/visual_factory.gd")
+
 const NODE_ID := "water_wheel"
 var repaired := false
 var wheel_mesh: MeshInstance3D
@@ -25,9 +27,7 @@ func _build_visual() -> void:
 	support.mesh = support_mesh
 	support.position.y = 1.4
 	support.position.x = -0.8
-	var support_mat := StandardMaterial3D.new()
-	support_mat.albedo_color = Color(0.25, 0.19, 0.13)
-	support_mat.roughness = 0.95
+	var support_mat: StandardMaterial3D = VisualFactory.make_material("res://assets/pixel/wood_texture.png", Color(0.76, 0.66, 0.50), 0.0, 0.95)
 	support.material_override = support_mat
 	add_child(support)
 
@@ -40,15 +40,13 @@ func _build_visual() -> void:
 	wheel_mesh.mesh = cylinder
 	wheel_mesh.rotation_degrees.z = 90.0
 	wheel_mesh.position.y = 1.6
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.33, 0.25, 0.16)
-	mat.roughness = 0.9
+	var mat: StandardMaterial3D = VisualFactory.make_material("res://assets/pixel/wood_texture.png", Color(0.86, 0.72, 0.50), 0.0, 0.90)
 	wheel_mesh.material_override = mat
 	add_child(wheel_mesh)
 
 func get_prompt(_player: Node) -> String:
 	if not repaired:
-		return "[F] Repair Water Wheel — requires Scrap x2"
+		return "[%s] Repair Water Wheel — requires Scrap x2" % SettingsManager.keybind_name("interact")
 	var rpm: float = GameState.mechanical_network.get_rpm(NODE_ID)
 	var torque: float = GameState.mechanical_network.get_torque(NODE_ID)
 	return "Water Wheel ONLINE | %.0f RPM | %.0f Nm" % [rpm, torque]

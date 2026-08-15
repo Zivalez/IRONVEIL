@@ -1,211 +1,171 @@
-# PHASE 2/3 SECURITY & SCALABILITY CONTRACT — DESIGN GATE
+# PHASE 2/3 SECURITY & SCALABILITY CONTRACT
 
-> Source of truth: `IRONVEIL_MASTER_PROMPT.md` §4.5, §6 and §10.
->
-> This document is an implementation contract for later phases. It is **not evidence that public multiplayer security is already implemented in Phase 1**.
+> Source of truth: `IRONVEIL_MASTER_PROMPT.md` §4.5, §6 and §10.  
+> **Current status:** Phase 2 safety envelope is implemented in source and lobby contract-tested where possible. Public multiplayer remains blocked until WSS, stress, multi-client, restart and checkpoint-recovery tests pass on the real deployment.
 
-## Why this exists
+## Implementation matrix
 
-Server-authoritative gameplay protects authoritative game state from client-side tampering, but it does not by itself protect the VPS from room spam, password brute force, runaway room processes, connection abuse, or progress loss after a room-server crash.
-
-The multiplayer stack must therefore add explicit capacity, abuse, transport, and resilience controls before public rooms are enabled.
-
-## Phase ownership
-
-### Phase 1 — current repository
-
-Prepare architectural seams only:
-
-- simulation state is independent from rendering/input;
-- `ChunkManager` can become multiplayer interest management;
-- persistence already exists for the prototype simulation state;
-- no lobby endpoint, room process, rate limiter, WSS endpoint, or public multiplayer UI is claimed as implemented.
-
-### Phase 2 — vertical slice multiplayer
-
-Implement the basic multiplayer safety envelope together with the room server:
-
-- server-enforced `MAX_PLAYERS_PER_ROOM = 4`;
-- configurable maximum number of active rooms;
-- CPU and memory limits for each room-server container/process;
-- room/player name sanitization and length bounds;
-- server-side room-password validation;
-- restart policy for room server;
-- periodic room checkpoint/persistence;
-- structured lifecycle/error/disconnect logging;
-- Web client connects through WebSocket-compatible transport;
-- production deployment path prepared for WSS through Dokploy/Traefik.
-
-For friend-only/internal testing, rate-limit values may still be tuned during Phase 2, but bypassing the server-enforced player/room/resource limits is not acceptable.
-
-### Phase 3 — public limited deployment gate
-
-Before public co-op rooms are enabled, all of the following must be operational and tested:
-
-- create-room rate limiting;
-- wrong-password attempt rate limiting/temporary lockout;
-- WSS only for the public HTTPS origin;
-- reverse proxy verified to preserve WebSocket upgrade and long-lived connections;
-- room capacity rejection returns a clear "server full" response;
-- resource limits verified under a deliberately stressed room;
-- automatic restart verified;
-- checkpoint recovery verified after a forced room-server crash;
-- logging is sufficient to identify room creation/closure, server errors, and abnormal disconnects.
+| Control | Source status | Runtime status |
+|---|---|---|
+| Max 4 players/room | Implemented in lobby + room server | Lobby contract PASS; Godot room runtime pending |
+| Configurable active-room cap | Implemented | Lobby contract PASS; room-server runtime pending |
+| CPU/RAM ceilings | Present in Phase 2 Compose | Needs VPS profiling/stress validation |
+| Create-room rate limit | Implemented in lobby | Contract path covered; production tuning pending |
+| Wrong-password limit | Implemented in lobby | Contract PASS |
+| Server-side password validation | Implemented, PBKDF2 hash persisted | Contract PASS |
+| Room/player name sanitization | Implemented in lobby | Contract PASS |
+| Short-lived signed join tickets | HMAC-SHA256 implemented | Godot authentication handshake runtime pending |
+| Public WSS | Configuration path documented | **Not yet verified** |
+| Restart policy | `unless-stopped` in Compose | Forced restart test pending |
+| Periodic checkpoint | Room server every ~30s | Force-crash recovery pending |
+| Structured logs | Lobby + room events | Operational review pending |
+| Full gameplay server authority | Partial only | **Not complete** |
 
 ## Capacity contract
 
 ### Players per room
 
-Hard maximum: **4 players**.
+Hard maximum: **4 players**. This is enforced in both the lobby reservation layer and the Godot room server; UI is not the enforcement boundary.
 
-This value must be enforced in authoritative server code. UI may display the limit, but UI is not an enforcement boundary.
+### Active rooms
 
-### Active room capacity
-
-The lobby service must expose a deployment-configurable room cap, for example:
+Deployment-configurable:
 
 ```text
-MAX_ACTIVE_ROOMS=<deployment-specific value>
+MAX_ACTIVE_ROOMS=<profiled capacity>
 ```
 
-The repository must not hardcode an arbitrary production room count because the correct value depends on VPS CPU/RAM and profiling of the actual simulation.
+When capacity is reached the lobby rejects creation with a clear `server_capacity_reached` response rather than overcommitting the VPS.
 
-When the limit is reached:
+### Resource ceilings
+
+`docker-compose.phase2.yml` currently supplies initial testing limits:
 
 ```text
-create_room → reject
-reason      → server_capacity_reached
+lobby       128 MB / 0.25 CPU
+room-server 768 MB / 1.0 CPU
 ```
 
-Never create rooms until the VPS becomes unstable.
-
-### Room process resources
-
-Every room-server deployment must have explicit CPU and memory ceilings in Docker/Dokploy. Exact values are chosen from profiling, not guessed in Phase 1.
-
-Resource limits protect other rooms from a runaway simulation or infinite loop; they do not replace profiling and optimization.
+These are test ceilings, not production sizing. Profile the actual factory/multiplayer simulation before choosing final values.
 
 ## Anti-abuse contract
 
 ### Create-room endpoint
 
-Rate limit per source IP. The exact Phase 3 production value is tunable/configurable, but the limiter itself is mandatory before public room creation.
-
-Expected behavior:
+Per-source-IP rate limit is enabled and configurable through:
 
 ```text
-within allowance  → create request evaluated normally
-limit exceeded    → HTTP 429 / equivalent application error
+CREATE_ROOM_LIMIT_PER_MINUTE
 ```
 
 ### Password attempts
 
-Room passwords remain a lightweight gameplay access gate, but attempts must be limited server-side.
-
-Baseline from the master prompt:
+Wrong password attempts are limited per IP + room. Default Phase 2 configuration follows the master prompt baseline:
 
 ```text
-maximum wrong attempts ≈ 5 / room / minute / IP
+PASSWORD_ATTEMPTS_PER_MINUTE=5
 ```
 
-Treat the number as configuration, while preserving the actual protection. Never return the room password in a listing or error.
+Room passwords are truncated to a bounded input length, hashed with PBKDF2 for persistence, validated server-side, and never returned in room listings or structured logs.
 
 ### Public text fields
 
-At minimum sanitize and bound:
+Lobby sanitizes and bounds room names and player names. Client-side display-name truncation exists for UX, but server-side sanitation is authoritative for lobby-visible strings.
 
-- room name;
-- player display name.
+## Join-ticket boundary
 
-Validation rules must be shared by server-side lobby logic. The client may pre-validate for UX, but the server re-validates every request.
+Lobby and room server share a strong deployment secret:
+
+```text
+ROOM_TOKEN_SECRET=<long random value>
+```
+
+Lobby issues a short-lived HMAC-SHA256 ticket containing room ID, sanitized player name, expiration and nonce. Room server verifies signature and expiration before calling SceneMultiplayer authentication completion.
+
+Compose intentionally refuses to start without `ROOM_TOKEN_SECRET` rather than silently using the development fallback.
 
 ## Transport contract
 
-### Public deployment
+Local development:
+
+```text
+http://client
+http://lobby
+ws://room
+```
+
+Public deployment:
 
 ```text
 HTTPS Web client
       │
-      ▼
-     WSS
+      ├── HTTPS → lobby
       │
-      ▼
-Dokploy / Traefik
-      │ WebSocket upgrade + long-lived timeout
-      ▼
-Godot authoritative room server
+      └── WSS ──→ Dokploy/Traefik ──→ Godot room server
 ```
 
-A page served over HTTPS must not depend on `ws://` in production. Public configuration must generate/use `wss://` endpoints.
+The public `PUBLIC_WS_URL` must be `wss://...`. The reverse proxy must preserve WebSocket upgrade semantics and use timeouts appropriate for persistent game connections.
 
-Reverse-proxy validation must include a connection kept open long enough to catch idle/read timeout problems, not only a successful initial handshake.
+A successful initial handshake is insufficient: test an actual gameplay connection for long enough to expose idle/read timeout problems.
 
 ## Resilience contract
 
-### Restart policy
+### Restart
 
-Room server uses Docker/Dokploy restart behavior such as `on-failure` or `unless-stopped` as appropriate for the final room-process model.
+Lobby and room server use `restart: unless-stopped` in the Phase 2 Compose file.
 
 ### Checkpoints
 
-A room process periodically persists authoritative room state. At minimum the future checkpoint must cover the state required to reconstruct the active world/base/factory for that room.
+Room server writes `room_server_checkpoint.json` approximately every 30 seconds and restores it on boot. Current checkpoint scope covers shared room flags. It must expand alongside authority migration so all authoritative inventory/factory/combat/world state needed to reconstruct a room survives a crash.
 
-A crash-recovery test is mandatory before public deployment:
+Required validation before public release:
 
 ```text
 create room
-→ alter persistent world state
-→ checkpoint
+→ alter authoritative state
+→ wait for checkpoint
 → force-kill room server
-→ restart/recover
-→ verify state is restored
+→ verify automatic restart
+→ reconnect
+→ verify state restored
 ```
 
 ### Logging
 
-At minimum record structured events for:
+Structured logs currently cover room/lobby startup, room creation, password failures/lockout, auth rejection, joins/disconnects and checkpoint outcomes. Do not log plaintext room passwords or the shared HMAC secret.
 
-- room created;
-- room closed;
-- room capacity rejection;
-- join/disconnect;
-- repeated password failures / lockout;
-- checkpoint success/failure;
-- server/runtime error;
-- abnormal disconnect.
+## Authority warning
 
-Do not log plaintext room passwords.
+The master prompt requires server-authoritative simulation. The current Phase 2 candidate is **not yet fully authoritative**:
 
-## Dokploy topology
+- room membership/authentication: server-owned;
+- movement: server-clamped and rebroadcast;
+- shared vertical-slice flags: server-routed;
+- inventory/survival/machine queues/general enemy simulation: authority migration still pending; Furnace Saint health/window is authoritative on the room server.
 
-### Phase 1
-
-Use a Dokploy **Application** with the root `Dockerfile`. It builds the Godot Web client and serves it through nginx on port 80.
-
-### Phase 2+
-
-The deployment becomes multi-service: Web client, authoritative room server(s), and lobby service. At that point use either Dokploy Compose or separately managed Dokploy applications if operationally cleaner, but keep service isolation and resource limits explicit.
-
-Do not introduce a Phase 2 Compose stack into the Phase 1 branch merely to look production-ready. The running services must exist before their deployment manifest becomes authoritative.
+Do not expose public co-op or make anti-cheat claims until the co-op-sensitive gameplay state is actually owned/validated by the room server.
 
 ## Horizontal scaling boundary
 
-Horizontal scaling across multiple room-server hosts/load-balanced capacity is explicitly outside Phase 1-2 scope. The lobby design must avoid assumptions that make later multi-host routing impossible, but no distributed orchestrator is required yet.
+Multiple room-server hosts/load balancing are outside Phase 1–2 scope. Current APIs should remain routable later, but no distributed orchestrator is required yet.
 
 ## Public Multiplayer Release Checklist
 
-- [ ] Max 4 players is enforced on the server.
-- [ ] Active-room cap is configurable and enforced.
-- [ ] Room CPU/memory limits are configured.
-- [ ] Create-room rate limiting is enabled.
-- [ ] Password-attempt rate limiting/lockout is enabled.
-- [ ] Room/player names are sanitized and length-limited server-side.
-- [ ] Public clients use WSS.
-- [ ] Traefik/Dokploy WebSocket upgrade + timeout behavior is verified.
-- [ ] Room server restart behavior is verified.
-- [ ] Periodic checkpoints are enabled.
-- [ ] Forced-crash recovery restores a checkpoint.
-- [ ] Lifecycle/error/disconnect logs are available.
-- [ ] Plaintext room passwords are never exposed/logged.
+- [x] Max 4 player rule exists in lobby and room-server source.
+- [x] Active-room cap is configurable in source/deployment.
+- [x] CPU/memory limits exist in Compose.
+- [x] Create-room limiter exists.
+- [x] Password-attempt limiter exists and contract test passes.
+- [x] Room/player names are sanitized/bounded server-side.
+- [x] Plaintext room passwords are not exposed by public listing/log contract.
+- [ ] Full co-op-sensitive simulation is server-authoritative.
+- [ ] Public clients use HTTPS lobby + WSS room endpoint.
+- [ ] Traefik/Dokploy WebSocket upgrade + long-lived timeout verified.
+- [ ] Fifth connected Godot client is rejected in real room-server test.
+- [ ] Resource ceilings verified under deliberate stress.
+- [ ] Room server automatic restart verified.
+- [ ] Periodic checkpoint observed in real room runtime.
+- [ ] Forced-crash recovery restores authoritative state.
+- [ ] Operational logs are reviewed and sufficient for incident debugging.
 
-Until every public-release item above passes, co-op may be used only in the limited testing scope allowed by the roadmap; it must not be described as production-public-ready.
+Until every required public-release item passes, co-op is private/limited testing only.

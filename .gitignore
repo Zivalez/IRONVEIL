@@ -3,3 +3,8 @@ build/
 *.tmp
 *.log
 .DS_Store
+
+# Local/deployment secrets
+.env
+.env.*
+!.env.phase2.example

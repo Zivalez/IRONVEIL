@@ -1,90 +1,90 @@
-# PHASE 2 NETWORK ARCHITECTURE — DESIGN ONLY
+# PHASE 2 NETWORK ARCHITECTURE
 
-> This document records the seam prepared by Phase 1. It is **not** evidence that Phase 2 has been implemented.
->
-> Security/scalability requirements are defined in `docs/PHASE2_SECURITY_SCALABILITY.md` and `IRONVEIL_MASTER_PROMPT.md` §4.5.
+**Status:** implementation candidate; runtime/desync acceptance pending.
 
 ## Components
 
-1. Web/native client using `WebSocketMultiplayerPeer` for Web-compatible transport.
-2. Headless Godot authoritative room server.
-3. Lightweight lobby service for create/list/join room operations and server-side password validation.
+1. **Godot Web/native client** — presentation, local input, lobby UI and WebSocket client.
+2. **Godot headless room server** — authenticated room membership, room limits, movement validation/replication, shared progression state and checkpoints.
+3. **Python lobby service** — create/list/join API, public/private visibility, password validation, rate limits and HMAC join-ticket issuance.
 
-## Authority
+## Current authority boundary
 
-Room server owns:
+Implemented server-owned boundaries:
 
-- simulation tick;
-- inventory/survival mutation;
-- mechanical network;
-- enemies/NPC simulation;
-- authoritative item/machine world state;
-- room membership and the hard four-player limit.
+- membership and room routing;
+- max 4 players/room;
+- active room capacity;
+- authentication ticket validation;
+- server-clamped player position updates;
+- room roster;
+- shared bridge/Mara/gate/thermal/boss progression flags;
+- room shared-state checkpoint.
 
-Client owns only presentation and local input intent.
+Still requiring authority migration before Phase 2 acceptance:
 
-## Replication Interest
+- player inventory and survival;
+- machine queues/output and full mechanical simulation;
+- general enemy AI/combat damage;
+- resource pickup ownership;
+- authoritative live lobby presence.
 
-Reuse `ChunkManager`:
+Therefore this source must **not** be described as fully server-authoritative yet.
+
+## Authentication
 
 ```text
-FULL          → frequent entity/state replication
-SIMPLIFIED    → lower-rate summaries
-STATISTICAL   → no high-frequency entity broadcast
+Client → Lobby POST create/join
+       ← short-lived HMAC join ticket + room id + websocket URL
+Client → Room WebSocket
+       → SceneMultiplayer auth payload(ticket)
+Room server verifies HMAC + expiry + room capacity
+       → complete_auth / reject
 ```
 
-Exact rates should be profiled during Phase 2, not guessed now.
+Lobby and room server share `ROOM_TOKEN_SECRET`; the secret is never sent to clients.
 
-## Room Contract
+## Room modes
 
-The lobby/room layer must enforce server-side:
+- **Public:** listed by `GET /rooms`.
+- **Private:** absent from public listing; another player joins by room ID/invite code.
+- Optional password is checked by lobby server only.
 
-- maximum **4 players per room**;
-- deployment-configurable active-room capacity;
-- public/private visibility;
-- optional password validation;
-- sanitized/bounded room and player names.
+## Web transport
 
-If server capacity is exhausted, room creation is rejected cleanly instead of spawning another process.
+Local development can use `ws://`. Public HTTPS deployment requires:
 
-## Room Password Rule
+```text
+https://game.example
+https://lobby.example
+wss://room.example
+```
 
-Password is a gameplay access gate:
+Dokploy/Traefik must proxy WebSocket upgrades and preserve long-lived connections.
 
-- validated only server-side;
-- never returned in public room listing;
-- never logged in plaintext;
-- no client-side-only validation;
-- no unnecessary identity/auth subsystem added solely for room passwords;
-- wrong attempts become rate-limited/locked out before public release.
+## Replication
 
-## Web Transport
+Phase 2 movement updates use unreliable ordered channel 1. Shared progression uses reliable channel 2; roster uses reliable channel 3.
 
-Development may connect directly to a local WebSocket endpoint. Public deployment from an HTTPS page must use **WSS** and Dokploy/Traefik must preserve WebSocket upgrade semantics and a timeout appropriate for persistent game connections.
+`ChunkManager` remains the intended foundation for future interest management:
 
-## Process Resilience
+```text
+FULL          → high-frequency relevant entities
+SIMPLIFIED    → lower-frequency summaries
+STATISTICAL   → no high-frequency entity stream
+```
 
-Each authoritative room process/container must eventually have:
+## Persistence
 
-- explicit CPU/RAM limits;
-- automatic restart behavior;
-- periodic authoritative-state checkpoints;
-- lifecycle/error/disconnect logging.
+Room server writes a checkpoint approximately every 30 seconds. Current checkpoint scope is room shared flags. As authority migration proceeds, the checkpoint must expand to every authoritative state required to reconstruct the active room.
 
-A restart without checkpoint recovery is not sufficient for public readiness.
+## Acceptance tests
 
-## Deployment Evolution
-
-### Current Phase 1
-
-Use Dokploy **Application** → root `Dockerfile` → Godot Web export → nginx port 80.
-
-### Phase 2+
-
-The game becomes a multi-service deployment (client + room server + lobby). Compose or separate Dokploy Applications may be used when those services actually exist. Do not add a fake multi-service deployment to Phase 1.
-
-## Implementation Gate
-
-Begin actual multiplayer implementation only after every Phase 1 runtime item in `PROJECT_STATE.md` is verified.
-
-Before public rooms are enabled, additionally pass every item in `docs/PHASE2_SECURITY_SCALABILITY.md`'s Public Multiplayer Release Checklist.
+- 2 clients join and move without major jitter/desync.
+- 4 clients join; fifth is rejected.
+- private room joins by invite code.
+- bridge/gate/thermal/boss progression reaches all connected peers.
+- late join receives already-set shared flags.
+- disconnect removes remote presentation.
+- WSS connection survives normal idle/play duration through Dokploy.
+- forced crash restarts server and restores valid checkpoint.

@@ -29,6 +29,21 @@ REQUIRED = [
     "CHANGELOG.md",
     "docs/PHASE2_NETWORK_ARCHITECTURE.md",
     "docs/PHASE2_SECURITY_SCALABILITY.md",
+    "docs/PHASE2_VERTICAL_SLICE.md",
+    "docs/DOKPLOY_PHASE2.md",
+    "docker-compose.phase2.yml",
+    "Dockerfile.room",
+    "services/lobby/lobby.py",
+    "services/lobby/Dockerfile",
+    "tools/test_lobby_contract.py",
+    "scenes/server/room_server.tscn",
+    "scripts/core/network_manager.gd",
+    "scripts/game/boss_furnace_saint.gd",
+    "scripts/game/bridge_repair.gd",
+    "scripts/game/dungeon_gate.gd",
+    "scripts/game/thermal_valve.gd",
+    "scripts/game/town_npc.gd",
+    "shaders/modern_pixel_post.gdshader",
 ]
 
 CATALOGS = [
@@ -104,6 +119,19 @@ def check_data() -> None:
         fail("Milestone 1 requires at least 1 Log in the region")
     if berry_spawned < 1:
         fail("Milestone 1 requires at least 1 edible berry in the region")
+
+    # Phase-2 economy: four Logs at 3 Planks each = 12. The bridge and gate
+    # consume 10 total, leaving margin. Scrap pays wheel(2)+gear(2)+plates(2).
+    if log_spawned * int(loaded["machines.json"]["mechanical_saw"].get("output_count", 0)) < 10:
+        fail("Phase 2 requires enough Logs to produce at least 10 Planks")
+    if scrap_spawned < 6:
+        fail("Phase 2 requires at least 6 Scrap for wheel, gear, and 2 press plates")
+    for enemy_id in ("hollow_stalker", "furnace_saint"):
+        if enemy_id not in loaded["enemies.json"]:
+            fail(f"Phase 2 missing enemy definition: {enemy_id}")
+    for biome_id in ("ashwick_town", "foundry_vault"):
+        if biome_id not in loaded["biomes.json"]:
+            fail(f"Phase 2 missing biome definition: {biome_id}")
 
 def check_mechanical_math() -> None:
     # Mirror the deterministic Phase 1 chain:
@@ -231,7 +259,7 @@ def check_compile_gate_coverage() -> None:
     project = (ROOT / "project.godot").read_text(encoding="utf-8")
     required_autoloads = {
         "DataRegistry", "TickManager", "ChunkManager", "SettingsManager",
-        "GameState", "SaveManager", "AudioManager",
+        "NetworkManager", "GameState", "SaveManager", "AudioManager",
     }
     configured = set(re.findall(r'^([A-Za-z_][A-Za-z0-9_]*)="\*res://', project, flags=re.MULTILINE))
     missing_autoloads = sorted(required_autoloads - configured)
@@ -247,7 +275,7 @@ def check_compile_gate_coverage() -> None:
     autoload_order = re.findall(r'^([A-Za-z_][A-Za-z0-9_]*)="\*res://', project, flags=re.MULTILINE)
     required_order = [
         "DataRegistry", "TickManager", "ChunkManager", "SettingsManager",
-        "GameState", "SaveManager", "AudioManager",
+        "NetworkManager", "GameState", "SaveManager", "AudioManager",
     ]
     positions = {name: autoload_order.index(name) for name in required_order if name in autoload_order}
     if positions.get("TickManager", 999) > positions.get("ChunkManager", -1):
@@ -288,6 +316,58 @@ def check_no_known_variant_inference_hazards() -> None:
                 line = text.count("\n", 0, match.start()) + 1
                 fail(f"{path.relative_to(ROOT)}:{line}: risky Variant inference with :=")
 
+def check_phase2_contract() -> None:
+    project = (ROOT / "project.godot").read_text(encoding="utf-8")
+    if 'NetworkManager="*res://scripts/core/network_manager.gd"' not in project:
+        fail("Phase 2 requires NetworkManager autoload")
+
+    game_state = (ROOT / "scripts/core/game_state.gd").read_text(encoding="utf-8")
+    if "VERTICAL SLICE COMPLETE" not in game_state or "Furnace Saint" not in game_state:
+        fail("Phase-2 objective chain is incomplete")
+    if game_state.count('"') < 10:
+        fail("GameState appears unexpectedly truncated")
+
+    main_gd = (ROOT / "scripts/game/main.gd").read_text(encoding="utf-8")
+    for term in ("BridgeRepairScript", "TownNPCScript", "DungeonGateScript", "ThermalValveScript", "BossScript", "PostProcessScript"):
+        if term not in main_gd:
+            fail(f"Phase-2 world is missing {term}")
+
+    pixel_dir = ROOT / "assets/pixel"
+    pixel_assets = list(pixel_dir.glob("*.png"))
+    if len(pixel_assets) < 20:
+        fail("Modern-pixel vertical slice requires at least 20 authored pixel assets")
+    for asset in ("player.png", "tree.png", "furnace_saint.png", "rust_metal.png", "town_stone.png", "spark.png", "steam.png"):
+        if not (pixel_dir / asset).exists():
+            fail(f"Missing Phase-2 pixel asset: {asset}")
+
+    network = (ROOT / "scripts/core/network_manager.gd").read_text(encoding="utf-8")
+    for term in ("MAX_PLAYERS_PER_ROOM := 4", "WebSocketMultiplayerPeer", "auth_callback", "ROOM_TOKEN_SECRET", "constant_time_compare", "_request_boss_damage", "_peer_is_near", "BOSS_DAMAGE_MIN_INTERVAL_MS"):
+        if term not in network:
+            fail(f"NetworkManager missing required multiplayer/security primitive: {term}")
+
+    lobby = (ROOT / "services/lobby/lobby.py").read_text(encoding="utf-8")
+    for term in ("MAX_PLAYERS_PER_ROOM = 4", "CREATE_ROOM_LIMIT_PER_MINUTE", "PASSWORD_ATTEMPTS_PER_MINUTE", "pbkdf2_hmac", "issue_ticket"):
+        if term not in lobby:
+            fail(f"Lobby service missing security control: {term}")
+
+    compose = (ROOT / "docker-compose.phase2.yml").read_text(encoding="utf-8")
+    for term in ("room-server:", "lobby:", "mem_limit:", "cpus:", "restart: unless-stopped", "ROOM_TOKEN_SECRET:?Set ROOM_TOKEN_SECRET"):
+        if term not in compose:
+            fail(f"Phase-2 compose missing infrastructure control: {term}")
+
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    dockerignore = (ROOT / ".dockerignore").read_text(encoding="utf-8")
+    if ".env.*" not in gitignore or "!.env.phase2.example" not in gitignore:
+        fail("Phase-2 secret env files must be ignored while preserving the example file")
+    if ".env.*" not in dockerignore:
+        fail("Phase-2 secret env files must not enter Docker build context")
+
+    hud = (ROOT / "scripts/ui/hud.gd").read_text(encoding="utf-8")
+    for term in ("CO-OP ROOM TERMINAL", "Room ID / invite code", "Colorblind palette", "_begin_rebind", "boss_health_bar"):
+        if term not in hud:
+            fail(f"Phase-2 HUD/settings missing capability: {term}")
+
+
 def main() -> None:
     check_required()
     check_data()
@@ -298,6 +378,7 @@ def main() -> None:
     check_compile_gate_coverage()
     check_project_references()
     check_no_known_variant_inference_hazards()
+    check_phase2_contract()
     print("IRONVEIL STATIC VALIDATION: PASS")
     print("Note: static validation does not replace running Godot or docker build.")
 
