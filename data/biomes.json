@@ -1,20 +1,58 @@
 [
   {
-    "id": "forest_workshop_edge",
-    "name": "Green Hollow Industrial Edge",
+    "id": "green_hollow",
+    "name": "Green Hollow",
+    "region": true,
+    "ambient_temperature": 18.0,
     "hazards": [
       "hunger",
-      "hostile_scavenger"
+      "fatigue",
+      "pests"
     ],
     "resources": [
       "wild_berries",
+      "fiber",
       "log",
+      "seed_tuber"
+    ]
+  },
+  {
+    "id": "ashlands",
+    "name": "Ashlands",
+    "region": true,
+    "ambient_temperature": 32.0,
+    "hazards": [
+      "heat",
+      "hollow_stalker",
+      "industrial_ruins"
+    ],
+    "resources": [
+      "iron_ore",
+      "charcoal",
+      "scrap"
+    ]
+  },
+  {
+    "id": "flooded_basin",
+    "name": "Flooded Basin",
+    "region": true,
+    "ambient_temperature": 13.0,
+    "hazards": [
+      "cold_water",
+      "contamination",
+      "vermin"
+    ],
+    "resources": [
+      "spring_water",
+      "fiber",
       "scrap"
     ]
   },
   {
     "id": "ashwick_town",
     "name": "Ashwick",
+    "region": false,
+    "ambient_temperature": 20.0,
     "hazards": [
       "abandoned_infrastructure"
     ],
@@ -27,6 +65,8 @@
   {
     "id": "foundry_vault",
     "name": "Ashwick Foundry Vault",
+    "region": false,
+    "ambient_temperature": 36.0,
     "hazards": [
       "hollow_stalker",
       "thermal_pressure",

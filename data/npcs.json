@@ -1,0 +1,43 @@
+[
+  {
+    "id": "mara",
+    "name": "Archivist Mara",
+    "specialization": "knowledge",
+    "need": "field records",
+    "offer": {
+      "seed_tuber": 2
+    },
+    "cost": {
+      "plank": 2
+    },
+    "dialogue": "The old systems fail in patterns. Bring me useful material and I will share what still grows."
+  },
+  {
+    "id": "harker",
+    "name": "Machinist Harker",
+    "specialization": "metallurgy",
+    "need": "working transmission parts",
+    "offer": {
+      "charcoal": 3,
+      "iron_ore": 2
+    },
+    "cost": {
+      "crude_gear": 1
+    },
+    "dialogue": "Ashlands ore is worthless until you can move enough force through it. Bring me a gear that runs true."
+  },
+  {
+    "id": "nia",
+    "name": "Grower Nia",
+    "specialization": "agriculture",
+    "need": "clean irrigation hardware",
+    "offer": {
+      "seed_tuber": 4,
+      "fiber": 3
+    },
+    "cost": {
+      "irrigation_pipe": 2
+    },
+    "dialogue": "Water is not the problem. Dirty water is. Fix the header and I can make the basin feed people again."
+  }
+]

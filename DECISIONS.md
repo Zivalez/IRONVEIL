@@ -156,3 +156,12 @@ A private room is omitted from public listing and joined by a shareable room ID 
 
 ### D-P2-07 — Authority claims remain conservative
 Room membership, movement acceptance and shared progression flags are server-routed in the Phase 2 candidate. Inventory, survival, full mechanical simulation and combat remain incomplete authority migrations. The repository must not call multiplayer fully server-authoritative until those systems move behind the server boundary and pass multi-client testing.
+
+## 2026-08-16 — Phase 3 MVP decisions
+
+- Treat Green Hollow, Ashlands and Flooded Basin as the three MVP regions; Ashwick/Foundry remain Green-Hollow-route subareas.
+- Keep all Phase-3 power mechanical; electrical simulation remains Phase 4.
+- Industrial crafting requires a live machine network rather than a menu-only research gate.
+- Farming complexity comes from five interacting factors; powered irrigation reduces repetitive watering.
+- Public co-op is fail-closed through `PUBLIC_MODE`: strong secret + HTTPS origin + WSS endpoint are mandatory.
+- Owner's explicit request advances implementation to Phase 3, but unresolved Phase-2 runtime/co-op acceptance remains documented rather than marked passed.

@@ -50,5 +50,59 @@
     "input_count": 1,
     "output_item": "pressed_plate",
     "output_count": 1
+  },
+  {
+    "id": "ashland_windmill",
+    "name": "Ashland Windmill",
+    "kind": "source",
+    "base_rpm": 44.0,
+    "base_torque": 96.0,
+    "description": "A wind-driven mechanical source suited to exposed Ashlands ridges."
+  },
+  {
+    "id": "ore_crusher",
+    "name": "Ore Crusher",
+    "kind": "consumer",
+    "min_rpm": 65.0,
+    "min_torque": 24.0,
+    "efficiency": 0.9,
+    "cycle_seconds": 3.8,
+    "input_item": "iron_ore",
+    "input_count": 2,
+    "output_item": "steel_bloom",
+    "output_count": 1,
+    "description": "A coupled crusher/compact forge abstraction for MVP metallurgy."
+  },
+  {
+    "id": "industrial_hammer",
+    "name": "Industrial Hammer",
+    "kind": "consumer",
+    "min_rpm": 75.0,
+    "min_torque": 30.0,
+    "efficiency": 0.88,
+    "cycle_seconds": 4.5,
+    "input_item": "steel_bloom",
+    "input_count": 1,
+    "output_item": "steel_beam",
+    "output_count": 1,
+    "description": "A heavy mechanical hammer used for industrial-tier shaping."
+  },
+  {
+    "id": "irrigation_pump",
+    "name": "Irrigation Pump",
+    "kind": "consumer",
+    "min_rpm": 45.0,
+    "min_torque": 18.0,
+    "efficiency": 0.91,
+    "description": "Moves basin water into the agricultural header when powered."
+  },
+  {
+    "id": "precision_bench",
+    "name": "Precision Bench",
+    "kind": "consumer",
+    "min_rpm": 60.0,
+    "min_torque": 20.0,
+    "efficiency": 0.9,
+    "description": "Powered fixture for industrial precision assembly."
   }
 ]

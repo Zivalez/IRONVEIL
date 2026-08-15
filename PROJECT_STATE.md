@@ -1,149 +1,89 @@
 # PROJECT STATE — IRONVEIL
 
 **Last updated:** 2026-08-16  
-**Current phase:** **Phase 2 — Vertical Slice**  
-**Status:** Phase 2 implementation candidate. Phase 1 Web build is reported running by the owner. The expanded solo vertical-slice source, modern-pixel rendering foundation, full settings UI, lobby service and room-server foundation are implemented and statically validated. Godot/Dokploy Phase 2 runtime and 2–4 client co-op acceptance are still pending. The reported Godot 4.7 HUD `String.upper()` compile failure has been fixed to `String.to_upper()` and guarded by static lint.
+**Current phase:** **Phase 3 — MVP implementation candidate**  
+**Owner override:** Phase 3 implementation was explicitly requested even though the previous Phase-2 multiplayer runtime checklist was not fully proven. That debt remains visible below; it is not treated as passed.
 
-## Current Milestone
+## Implemented in source
 
-```text
-Green Hollow
-→ Workshop automation
-→ Ashwick bridge
-→ Archivist Mara
-→ Mechanical press
-→ Foundry Vault
-→ dual thermal valves
-→ Furnace Saint
-→ VERTICAL SLICE COMPLETE
-```
+### Three-region MVP
 
-## Functional in Source
+- **Green Hollow**: original survival/workshop/Ashwick/Foundry route retained.
+- **Ashlands**: distinct climate context, industrial ruins, ore/charcoal, Harker barter, wind mechanical source, workshop metallurgy, powered industrial hammer and precision bench.
+- **Flooded Basin**: distinct climate context, water field, irrigation pump, three persistent crop plots, Grower Nia barter and basin enemies/resources.
 
-### Vertical-slice content
+### Survival / health
 
-- Continuous Phase 2 route containing forest, abandoned workshop, Ashwick town and Foundry Vault dungeon.
-- Phase 1 survival/inventory/combat/mechanical automation retained.
-- Bridge repair uses automatically produced Planks as an exploration gate.
-- Archivist Mara provides world/knowledge progression before Foundry access.
-- Mechanical press creates the required Pressed Plates.
-- Foundry gate consumes 2 Pressed Plates + 4 Planks.
-- Two thermal relief valves create a timed Furnace Saint vulnerability window.
-- Furnace Saint sealed armor heavily resists brute-force damage.
-- Objective chain extended through vertical-slice completion.
-- Journal continues Observation → Hypothesis → Confirmation design.
+- Hunger and thirst retained.
+- Body temperature responds to region ambient temperature.
+- Fatigue affects movement/stamina recovery.
+- Stamina gates sprinting and attacks.
+- Stress and morale are persistent survival values.
+- Body-part injuries are tracked for head/torso/arms/legs.
+- Arm injuries reduce combat output; leg injuries reduce movement.
+- Untreated injuries increase infection risk; bandage/salve reduce medical risk.
 
-### Modern Pixel / Hi-Bit presentation foundation
+### Crafting / automation
 
-- Representative authored pixel sprites for player, remote player, NPC, three enemy types, vegetation, pickups and effects.
-- Pixel textures for forest/town/workshop/dungeon/wood/rust/stone/water surfaces.
-- Nearest filtering contract in project and material helpers.
-- 3D machinery retained for physically readable rotation/transmission.
-- Dynamic DirectionalLight/OmniLight and real-time shadows.
-- Pixel dust/steam atmosphere.
-- Web-safe screen shader for quantization, dithering, vignette and accessibility transforms.
-- Art is development-quality representative content, not final production art.
+- Explicit craft-tier enforcement: handcraft → workshop → industrial.
+- Workshop recipes: filtration, irrigation hardware and steel bloom.
+- Industrial recipes require powered industrial machinery.
+- Ashland wind source feeds industrial consumers.
+- Industrial hammer automatically processes loaded steel bloom while power requirements are met.
+- Precision bench requires live mechanical power.
+- Basin irrigation pump requires installed hardware plus mechanical power.
 
-### Settings
+### Farming
 
-- Graphics, Audio, Controls, Gameplay, Accessibility and Network categories exist.
-- Keybinds are remappable and world prompts read the current interaction/crafting binds.
-- Settings persist through ConfigFile.
+Crop growth evaluates water, fertility, sunlight, local region temperature and pests. Irrigation online status automatically offsets water drain, following the design rule that infrastructure should reduce chores rather than create more of them.
 
-### Phase 2 networking foundation
+### NPC settlement basics
 
-- `NetworkManager` autoload using `WebSocketMultiplayerPeer`.
-- WebSocket room server scene/process.
-- HMAC-signed short-lived lobby join tickets.
-- SceneMultiplayer authentication path.
-- Hard 4-player room limit on room server and lobby.
-- Configurable active-room cap.
-- Public/private rooms; private rooms joinable via invite room ID.
-- Server-side room password checking; plaintext password is not listed/logged.
-- Room/player name sanitization and bounds in lobby.
-- Create-room and incorrect-password rate limiting in lobby.
-- Server-clamped movement replication and remote-player presentation.
-- Shared Phase 2 world flags replicated through room server.
-- Periodic room-state checkpoint file and restart policy in Compose.
-- Structured lobby/room logs.
-- Initial Compose resource ceilings for lobby/room server.
+Data-driven NPC definitions include specialization, stated need, barter cost and production offer for Mara/Harker/Nia-level settlement interactions. Full factions/reputation remain Phase 4 scope.
 
-### Deployment/test tooling
+### Security / deployment hardening
 
-- Root Web-client `Dockerfile` remains compatible with Dokploy Application deployment.
-- `Dockerfile.room` builds the headless room server.
-- `services/lobby/Dockerfile` builds the lobby.
-- `docker-compose.phase2.yml` defines the Phase 2 topology.
-- Static validator passes.
-- Python lobby integration/contract test passes locally.
-- Godot scene-based CI includes all Phase 2 runtime scripts and checks the real boot path.
+- Hard room cap remains 4 players.
+- Active-room cap remains configurable.
+- Create-room, password-attempt and general HTTP request rate limits exist.
+- Names remain sanitized/bounded.
+- Public mode enforces WSS browser endpoint, HTTPS exact origin and strong room-token secret.
+- CPU/RAM ceilings and restart policies are present in Phase-3 Compose.
+- Headless room checkpointing/logging retained.
 
-## Important Incomplete Work
+## Not yet accepted / runtime debt
 
-These items prevent calling Phase 2 complete:
+1. This Phase-3 source has not been executed by a local Godot 4.7.1 binary in the artifact environment; Dokploy Godot CI remains the authoritative compile/runtime gate.
+2. Full three-region route has not yet been end-to-end played in the deployed Web build.
+3. 2–4-player Phase-2/Phase-3 co-op acceptance remains pending.
+4. General inventory, farming, most machine inventory and ordinary enemy state are not yet fully room-server authoritative. Shared progression/boss authority is stronger than general simulation authority.
+5. Public WSS/Traefik long-session behavior needs real deployment verification.
+6. Forced crash/checkpoint restore and resource-limit stress need real tests.
+7. Phase-3 content is an MVP systems/content candidate; it does **not** honestly provide 15–25 hours of authored content yet.
+8. Pixel assets remain representative development art, not final production-quality Hi-Bit art.
 
-1. **Godot Phase 2 runtime has not been executed in this build environment.** It must pass Dokploy/Godot CI and actual browser play.
-2. **2–4 Web clients have not yet been runtime-tested together.** Movement/flags need desync and disconnect/reconnect tests.
-3. **Full server authority is incomplete.** Inventory, survival, general enemy AI and machine simulation are still primarily client-local; Furnace Saint health/vulnerability is server-owned; the room server currently authorizes membership, clamps movement and owns shared progression flags. These systems must migrate to authority before claiming the complete server-authoritative architecture from the master prompt.
-4. Public WSS/Traefik long-lived connection behavior is not yet verified.
-5. Checkpoint recovery is implemented for current room shared state but has not been force-crash tested, and it does not yet include the complete future authoritative factory/inventory simulation.
-6. Lobby player counts currently use short-lived reservations rather than authoritative live presence; this is acceptable for the implementation candidate but must be reconciled before final Phase 2 acceptance.
-7. Representative Phase 2 pixel art establishes direction but does not meet final production-art quality.
+## Phase 3 acceptance checklist
 
-## Phase 2 Acceptance Checklist
+- [ ] `IRONVEIL ALL-SCRIPT COMPILE GATE: PASS` on Godot 4.7.1.
+- [ ] `IRONVEIL HEADLESS TESTS: PASS`.
+- [ ] Web export loads without parser/runtime errors.
+- [ ] Phase-2 route still completes without regression.
+- [ ] Ashlands region entry/climate/resources function.
+- [ ] Harker barter and windmill repair are completable legitimately.
+- [ ] Workshop Steel Bloom and powered Steel Beam production work.
+- [ ] Precision Component production requires powered industrial station.
+- [ ] Flooded Basin region and irrigation header work.
+- [ ] Farming responds to all five factors and can reach harvest.
+- [ ] Save/load restores injuries, region and crop state.
+- [ ] 2 clients complete route without major divergence.
+- [ ] 4 clients complete route; fifth is rejected.
+- [ ] Public lobby fails closed on non-WSS/weak-secret/wildcard-origin config.
+- [ ] Public WSS survives long session through Dokploy/Traefik.
+- [ ] Forced room crash restarts and restores checkpoint.
+- [ ] CPU/RAM ceilings verified under stress.
 
-### Solo vertical slice
+## Next
 
-- [ ] Client Docker build passes the Phase 2 Godot CI gate.
-- [ ] Web build loads from splash into gameplay without parser/runtime errors.
-- [ ] Forest → workshop → Ashwick → Foundry → Furnace Saint can be completed end-to-end.
-- [ ] Bridge resource economy is completable without debug grants.
-- [ ] Mechanical press can produce 2 required plates.
-- [ ] Foundry gate opens from legitimate resources.
-- [ ] Both thermal valves produce a timed boss vulnerability window.
-- [ ] Furnace Saint cannot be efficiently brute-forced and can be defeated in the intended window.
-- [ ] Save/load does not corrupt the Phase 2 objective/world flags.
-- [ ] Modern-pixel post-processing and representative assets render correctly in Web Compatibility.
-
-### Settings
-
-- [ ] All six settings categories open without UI overlap at 1280×720.
-- [ ] Remapped keys immediately change gameplay and prompts.
-- [ ] Settings persist after browser reload/native restart.
-- [ ] Colorblind/post-processing toggles update the rendered result.
-
-### Lobby / room server
-
-- [x] Python lobby create/list/join contract test passes locally.
-- [x] Public room listing hides private rooms/passwords.
-- [x] Private room can be addressed by room ID/invite code in UI/source contract.
-- [x] Lobby rejects room creation at configured room capacity.
-- [x] Wrong password attempts are rate limited.
-- [ ] `Dockerfile.room` builds and room server reaches `IRONVEIL_ROOM_SERVER_READY`.
-- [ ] Two Web clients can join one room.
-- [ ] Four Web clients can join one room.
-- [ ] Fifth player is rejected server-side.
-- [ ] Remote movement is stable and a disconnect removes the remote player.
-- [ ] Bridge/gate/valve/boss shared flags stay consistent between clients.
-- [ ] Rejoining client receives existing shared flags.
-- [ ] No major desync through the complete vertical-slice route.
-
-### Authority / security / resilience
-
-- [ ] Inventory/survival/machine/combat/enemy state needed for co-op is migrated to authoritative server ownership or otherwise validated so clients cannot arbitrarily commit authoritative world outcomes.
-- [ ] Public client uses HTTPS lobby + WSS room endpoint.
-- [ ] Dokploy/Traefik WebSocket upgrade and long-lived timeout verified.
-- [ ] CPU/RAM ceilings validated under deliberate stress.
-- [ ] Forced room-server crash triggers restart.
-- [ ] Forced crash restores the latest valid checkpoint.
-- [ ] Logs are sufficient to diagnose room lifecycle/errors/disconnects.
-
-## Phase 3 Gate
-
-**Do not start Phase 3** until every Phase 2 gameplay/co-op requirement above that is part of the master prompt has passed in real runtime. Public co-op additionally remains blocked by the complete `docs/PHASE2_SECURITY_SCALABILITY.md` release checklist.
-
-## Next Concrete Steps
-
-1. Push this Phase 2 candidate to GitHub and run the Web client Docker/Dokploy build; fix any Godot 4.7 parser/runtime gate failure before further features.
-2. Deploy lobby + room server privately, configure HTTPS/WSS endpoints, then test 2 → 4 clients.
-3. Move co-op-sensitive inventory/machine/combat/world mutation to server authority and run the full vertical slice with multiple clients before marking Phase 2 complete.
+1. Push candidate to GitHub and let Dokploy run the Godot 4.7.1 CI gate.
+2. Fix any engine-level parser/runtime issue before adding further Phase-3 content.
+3. Run solo three-region progression, then 2→4 client co-op/security acceptance.

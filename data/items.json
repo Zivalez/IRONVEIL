@@ -62,5 +62,86 @@
     "category": "medical",
     "max_stack": 6,
     "description": "A clean wrap that restores a small amount of health when used."
+  },
+  {
+    "id": "fiber",
+    "name": "Plant Fiber",
+    "category": "material",
+    "max_stack": 30,
+    "description": "Tough plant fiber for bindings, filters and field medicine."
+  },
+  {
+    "id": "seed_tuber",
+    "name": "Tuber Seed",
+    "category": "seed",
+    "max_stack": 20,
+    "description": "A hardy Green Hollow tuber seed selected for poor soil."
+  },
+  {
+    "id": "field_tuber",
+    "name": "Field Tuber",
+    "category": "food",
+    "max_stack": 16,
+    "description": "A starchy crop. Filling when harvested at maturity.",
+    "nutrition": {
+      "hunger": 30.0,
+      "thirst": 2.0
+    }
+  },
+  {
+    "id": "iron_ore",
+    "name": "Iron Ore",
+    "category": "material",
+    "max_stack": 24,
+    "description": "Oxidized ore scavenged from the Ashlands cut."
+  },
+  {
+    "id": "charcoal",
+    "name": "Charcoal",
+    "category": "fuel",
+    "max_stack": 24,
+    "description": "Dense carbon fuel used by workshop metallurgy."
+  },
+  {
+    "id": "steel_bloom",
+    "name": "Steel Bloom",
+    "category": "industrial",
+    "max_stack": 12,
+    "description": "Rough consolidated steel ready for powered shaping."
+  },
+  {
+    "id": "steel_beam",
+    "name": "Steel Beam",
+    "category": "industrial",
+    "max_stack": 10,
+    "description": "Structural steel formed by an industrial mechanical hammer."
+  },
+  {
+    "id": "precision_component",
+    "name": "Precision Component",
+    "category": "industrial",
+    "max_stack": 12,
+    "description": "A carefully fitted mechanical component used by infrastructure systems."
+  },
+  {
+    "id": "filter_cartridge",
+    "name": "Filter Cartridge",
+    "category": "component",
+    "max_stack": 10,
+    "description": "Layered fiber and charcoal cartridge for water purification."
+  },
+  {
+    "id": "irrigation_pipe",
+    "name": "Irrigation Pipe",
+    "category": "component",
+    "max_stack": 16,
+    "description": "Low-pressure pipe for moving clean water to crop beds."
+  },
+  {
+    "id": "salve",
+    "name": "Antiseptic Salve",
+    "category": "medical",
+    "max_stack": 8,
+    "description": "A field antiseptic that reduces wound infection risk."
   }
 ]

@@ -424,7 +424,8 @@ func _request_shared_flag(flag: String, value: Variant) -> void:
 		return
 	var allowed_client_flags: Array[String] = [
 		"bridge_repaired", "mara_spoken", "foundry_gate_open",
-		"thermal_valve_a", "thermal_valve_b"
+		"thermal_valve_a", "thermal_valve_b",
+		"ashlands_wind_online", "basin_irrigation_online", "phase3_mvp_complete"
 	]
 	if not allowed_client_flags.has(flag) or not bool(value):
 		return
@@ -438,6 +439,9 @@ func _request_shared_flag(flag: String, value: Variant) -> void:
 		"foundry_gate_open": Vector3(54.2, 0.0, 0.0),
 		"thermal_valve_a": Vector3(63.0, 0.0, -7.0),
 		"thermal_valve_b": Vector3(63.0, 0.0, 7.0),
+		"ashlands_wind_online": Vector3(108.0, 0.0, -5.0),
+		"basin_irrigation_online": Vector3(148.0, 0.0, -3.0),
+		"phase3_mvp_complete": Vector3(164.0, 0.0, 7.0),
 	}
 	var interaction_position_value: Variant = required_position.get(flag, null)
 	if interaction_position_value is Vector3 and not _peer_is_near(sender_id, interaction_position_value as Vector3, 5.5):
@@ -448,6 +452,12 @@ func _request_shared_flag(flag: String, value: Variant) -> void:
 	if flag == "foundry_gate_open" and not bool(state.get("mara_spoken", false)):
 		return
 	if flag.begins_with("thermal_valve_") and not bool(state.get("foundry_gate_open", false)):
+		return
+	if flag == "ashlands_wind_online" and not bool(state.get("furnace_saint_defeated", false)):
+		return
+	if flag == "basin_irrigation_online" and not bool(state.get("ashlands_wind_online", false)):
+		return
+	if flag == "phase3_mvp_complete" and not bool(state.get("basin_irrigation_online", false)):
 		return
 	_set_room_shared_flag(room_id, flag, true)
 	state = _room_shared_flags.get(room_id, {})

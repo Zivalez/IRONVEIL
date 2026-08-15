@@ -7,6 +7,12 @@ const CHECKPOINT_PATH := "user://room_server_checkpoint.json"
 var _checkpoint_accumulator: float = 0.0
 
 func _ready() -> void:
+	var public_mode: bool = OS.get_environment("PUBLIC_MODE").to_lower() in ["1", "true", "yes", "on"]
+	var token_secret: String = OS.get_environment("ROOM_TOKEN_SECRET")
+	if public_mode and token_secret.length() < 32:
+		push_error("IRONVEIL_ROOM_CONFIG_ERROR: ROOM_TOKEN_SECRET must be at least 32 characters in PUBLIC_MODE")
+		get_tree().quit(2)
+		return
 	var port: int = DEFAULT_PORT
 	var port_env: String = OS.get_environment("ROOM_PORT")
 	if not port_env.is_empty():

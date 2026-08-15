@@ -44,6 +44,18 @@ REQUIRED = [
     "scripts/game/thermal_valve.gd",
     "scripts/game/town_npc.gd",
     "shaders/modern_pixel_post.gdshader",
+    "docker-compose.phase3.yml",
+    ".env.phase3.example",
+    "docs/PHASE3_MVP.md",
+    "docs/DOKPLOY_PHASE3.md",
+    "scripts/game/region_zone.gd",
+    "scripts/game/farm_plot.gd",
+    "scripts/game/settlement_npc.gd",
+    "scripts/game/workshop_bench.gd",
+    "scripts/game/windmill_source.gd",
+    "scripts/game/industrial_hammer.gd",
+    "scripts/game/industrial_station.gd",
+    "scripts/game/irrigation_pump.gd",
 ]
 
 CATALOGS = [
@@ -54,6 +66,8 @@ CATALOGS = [
     "enemies.json",
     "biomes.json",
     "technologies.json",
+    "crops.json",
+    "npcs.json",
 ]
 
 def fail(message: str) -> None:
@@ -106,6 +120,18 @@ def check_data() -> None:
         for item_id in biome.get("resources", []):
             if item_id not in items:
                 fail(f"Biome {biome_id} references missing resource item {item_id}")
+
+    for crop_id, crop in loaded["crops.json"].items():
+        for key in ("seed_item", "harvest_item"):
+            item_id = crop.get(key)
+            if item_id and item_id not in items:
+                fail(f"Crop {crop_id} references missing item {item_id}")
+
+    for npc_id, npc in loaded["npcs.json"].items():
+        for side in ("cost", "offer"):
+            for item_id in npc.get(side, {}):
+                if item_id not in items:
+                    fail(f"NPC {npc_id} {side} references missing item {item_id}")
 
     # Milestone-1 economy sanity: enough fixed resources exist in main.gd to
     # repair the wheel (2 Scrap), craft the gear (2 Scrap), and load the saw.
@@ -395,6 +421,49 @@ def check_phase2_contract() -> None:
             fail(f"Phase-2 HUD/settings missing capability: {term}")
 
 
+def check_phase3_contract() -> None:
+    biomes = load_catalog("biomes.json")
+    regions = [rid for rid, record in biomes.items() if record.get("region") is True]
+    for required in ("green_hollow", "ashlands", "flooded_basin"):
+        if required not in regions:
+            fail(f"Phase 3 missing required region: {required}")
+
+    recipes = load_catalog("recipes.json")
+    tiers = {str(record.get("tier", "")) for record in recipes.values()}
+    if not {"handcraft", "workshop", "industrial"}.issubset(tiers):
+        fail("Phase 3 requires handcraft/workshop/industrial recipe tiers")
+
+    game_state = (ROOT / "scripts/core/game_state.gd").read_text(encoding="utf-8")
+    for term in ("body_temperature", "fatigue", "stress", "morale", "infection_risk", "injuries", "CRAFT_TIER_RANK"):
+        if term not in game_state:
+            fail(f"Phase 3 survival/crafting state missing: {term}")
+
+    farm = (ROOT / "scripts/game/farm_plot.gd").read_text(encoding="utf-8")
+    for term in ("water", "fertility", "sunlight", "pests", "preferred_temperature"):
+        if term not in farm:
+            fail(f"Phase 3 farming factor missing: {term}")
+
+    main_gd = (ROOT / "scripts/game/main.gd").read_text(encoding="utf-8")
+    for term in ("_build_ashlands_region", "_build_flooded_basin_region", "WindmillSourceScript", "IndustrialHammerScript", "IrrigationPumpScript", "FarmPlotScript"):
+        if term not in main_gd:
+            fail(f"Phase 3 world/system missing: {term}")
+
+    lobby = (ROOT / "services/lobby/lobby.py").read_text(encoding="utf-8")
+    for term in ("PUBLIC_MODE", "GENERAL_REQUEST_LIMIT_PER_MINUTE", 'PUBLIC_WS_URL.startswith("wss://")', 'ALLOWED_ORIGIN.startswith("https://")'):
+        if term not in lobby:
+            fail(f"Phase 3 public security gate missing: {term}")
+
+    compose = (ROOT / "docker-compose.phase3.yml").read_text(encoding="utf-8")
+    for term in ("PUBLIC_MODE", "mem_limit:", "cpus:", "restart: unless-stopped", "GENERAL_REQUEST_LIMIT_PER_MINUTE"):
+        if term not in compose:
+            fail(f"Phase 3 compose missing deployment control: {term}")
+
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    dockerignore = (ROOT / ".dockerignore").read_text(encoding="utf-8")
+    if "!.env.phase3.example" not in gitignore or "!.env.phase3.example" not in dockerignore:
+        fail("Phase 3 example env must remain available while real env files stay ignored")
+
+
 def main() -> None:
     check_required()
     check_data()
@@ -407,6 +476,7 @@ def main() -> None:
     check_no_known_variant_inference_hazards()
     check_no_foreign_string_api_calls()
     check_phase2_contract()
+    check_phase3_contract()
     print("IRONVEIL STATIC VALIDATION: PASS")
     print("Note: static validation does not replace running Godot or docker build.")
 

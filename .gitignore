@@ -8,3 +8,4 @@ build/
 .env
 .env.*
 !.env.phase2.example
+!.env.phase3.example

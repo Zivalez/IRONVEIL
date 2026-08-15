@@ -17,7 +17,21 @@
       "gear",
       "belt",
       "mechanical_saw",
-      "mechanical_press"
+      "mechanical_press",
+      "workshop"
+    ]
+  },
+  {
+    "id": "industrial",
+    "name": "Industrial",
+    "requires": [
+      "mechanical"
+    ],
+    "unlocks": [
+      "ore_crusher",
+      "industrial_hammer",
+      "irrigation_pump",
+      "industrial_crafting"
     ]
   }
 ]

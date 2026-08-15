@@ -7,6 +7,8 @@ var materials: Dictionary = {}
 var enemies: Dictionary = {}
 var biomes: Dictionary = {}
 var technologies: Dictionary = {}
+var crops: Dictionary = {}
+var npcs: Dictionary = {}
 
 const CATALOGS := {
 	"items": "res://data/items.json",
@@ -16,6 +18,8 @@ const CATALOGS := {
 	"enemies": "res://data/enemies.json",
 	"biomes": "res://data/biomes.json",
 	"technologies": "res://data/technologies.json",
+	"crops": "res://data/crops.json",
+	"npcs": "res://data/npcs.json",
 }
 
 func _ready() -> void:
@@ -67,6 +71,12 @@ func get_biome(biome_id: String) -> Dictionary:
 
 func get_technology(technology_id: String) -> Dictionary:
 	return _get_record(technologies, technology_id)
+
+func get_crop(crop_id: String) -> Dictionary:
+	return _get_record(crops, crop_id)
+
+func get_npc(npc_id: String) -> Dictionary:
+	return _get_record(npcs, npc_id)
 
 func _get_record(catalog: Dictionary, record_id: String) -> Dictionary:
 	var value: Variant = catalog.get(record_id, {})

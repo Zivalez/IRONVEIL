@@ -2,8 +2,8 @@
 
 **IRONVEIL** is a 2.5D isometric survival/engineering RPG built with Godot 4.x. Progression is knowledge-driven: observe systems, understand them, build working infrastructure, then automate it.
 
-> **Current repository phase:** **Phase 2 — Vertical Slice / runtime candidate**.  
-> Phase 1 Web First Playable has been reported running by the project owner. Phase 2 source now expands the playable route and introduces the co-op stack, but Phase 2 is **not accepted as complete** until the Godot/Dokploy runtime and 2–4 player tests in `PROJECT_STATE.md` pass.
+> **Current repository phase:** **Phase 3 — MVP implementation candidate**.  
+> Phase 1 Web First Playable has been reported running by the project owner. Phase 3 was explicitly requested by the owner before every Phase-2 multiplayer acceptance item was proven; unresolved runtime/co-op debt remains tracked in `PROJECT_STATE.md` and is not marked passed.
 
 ## Phase 2 Vertical Slice
 
@@ -25,6 +25,23 @@ Green Hollow forest
 ```
 
 The boss is intentionally systemic: sealed armor reduces direct attacks to negligible damage. The Foundry pressure system creates the real combat opening.
+
+
+## Phase 3 MVP extension
+
+```text
+Green Hollow / Ashwick / Foundry
+→ Ashlands wind-powered industry
+→ workshop metallurgy
+→ powered industrial shaping
+→ Flooded Basin irrigation
+→ multi-factor farming
+→ settlement barter loop
+```
+
+The three MVP regions are **Green Hollow**, **Ashlands**, and **Flooded Basin**. Survival now includes temperature, fatigue, stamina, stress, morale, body-part injury state and infection risk. Crafting is enforced across handcraft/workshop/industrial tiers, and industrial output requires live mechanical power.
+
+Phase-3 source does **not** claim the blueprint's 15–25 hours of authored content yet; this is a systems/content implementation candidate awaiting real Godot/Web/co-op acceptance.
 
 ## Visual Direction
 
@@ -146,13 +163,13 @@ This root `Dockerfile` intentionally remains usable as a normal **Dokploy Applic
 Create environment file:
 
 ```bash
-cp .env.phase2.example .env.phase2
+cp .env.phase3.example .env.phase3
 ```
 
 Replace `ROOM_TOKEN_SECRET` with a long random value, then:
 
 ```bash
-docker compose --env-file .env.phase2 -f docker-compose.phase2.yml up --build
+docker compose --env-file .env.phase3 -f docker-compose.phase3.yml up --build
 ```
 
 Default local endpoints:

@@ -32,9 +32,12 @@ MAX_ACTIVE_ROOMS = max(1, int(os.getenv("MAX_ACTIVE_ROOMS", "16")))
 MAX_PLAYERS_PER_ROOM = 4
 CREATE_ROOM_LIMIT_PER_MINUTE = max(1, int(os.getenv("CREATE_ROOM_LIMIT_PER_MINUTE", "6")))
 PASSWORD_ATTEMPTS_PER_MINUTE = max(1, int(os.getenv("PASSWORD_ATTEMPTS_PER_MINUTE", "5")))
+GENERAL_REQUEST_LIMIT_PER_MINUTE = max(10, int(os.getenv("GENERAL_REQUEST_LIMIT_PER_MINUTE", "120")))
 PUBLIC_WS_URL = os.getenv("PUBLIC_WS_URL", "ws://127.0.0.1:9081")
 TOKEN_SECRET = os.getenv("ROOM_TOKEN_SECRET", "development-only-change-me")
 ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")
+PUBLIC_MODE = os.getenv("PUBLIC_MODE", "false").lower() in {"1", "true", "yes", "on"}
+TRUST_PROXY_HEADERS = os.getenv("TRUST_PROXY_HEADERS", "false").lower() in {"1", "true", "yes", "on"}
 ROOM_TTL_SECONDS = max(300, int(os.getenv("ROOM_TTL_SECONDS", "21600")))
 RESERVATION_TTL_SECONDS = max(15, int(os.getenv("RESERVATION_TTL_SECONDS", "120")))
 DATA_PATH = Path(os.getenv("LOBBY_DATA_PATH", "/data/rooms.json"))
@@ -121,6 +124,7 @@ class LobbyState:
         self.rooms: dict[str, Room] = {}
         self.create_attempts: dict[str, deque[int]] = defaultdict(deque)
         self.password_attempts: dict[tuple[str, str], deque[int]] = defaultdict(deque)
+        self.request_attempts: dict[str, deque[int]] = defaultdict(deque)
         self.load()
 
     def cleanup(self) -> None:
@@ -187,6 +191,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         STATE.cleanup()
+        if not self.allow_general_request():
+            return
         path = urlparse(self.path).path
         if path == "/health":
             self.json_response(HTTPStatus.OK, {"ok": True, "rooms": len(STATE.rooms), "max_rooms": MAX_ACTIVE_ROOMS})
@@ -201,6 +207,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         STATE.cleanup()
+        if not self.allow_general_request():
+            return
         path = urlparse(self.path).path
         if path == "/rooms":
             self.create_room()
@@ -211,8 +219,24 @@ class Handler(BaseHTTPRequestHandler):
             return
         self.json_response(HTTPStatus.NOT_FOUND, {"message": "not_found"})
 
+
+    def client_ip(self) -> str:
+        if TRUST_PROXY_HEADERS:
+            forwarded = self.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+            if forwarded:
+                return forwarded[:64]
+        return str(self.client_address[0])[:64]
+
+    def allow_general_request(self) -> bool:
+        ip = self.client_ip()
+        with STATE.lock:
+            if STATE.allow_rate(STATE.request_attempts[ip], GENERAL_REQUEST_LIMIT_PER_MINUTE):
+                return True
+        self.json_response(HTTPStatus.TOO_MANY_REQUESTS, {"message": "Too many requests. Try again later."})
+        return False
+
     def create_room(self) -> None:
-        ip = self.client_address[0]
+        ip = self.client_ip()
         with STATE.lock:
             if not STATE.allow_rate(STATE.create_attempts[ip], CREATE_ROOM_LIMIT_PER_MINUTE):
                 self.json_response(HTTPStatus.TOO_MANY_REQUESTS, {"message": "Too many room creation attempts. Try again later."})
@@ -246,7 +270,7 @@ class Handler(BaseHTTPRequestHandler):
         self.ticket_response(room_id, player_name, HTTPStatus.CREATED)
 
     def join_room(self, room_id: str) -> None:
-        ip = self.client_address[0]
+        ip = self.client_ip()
         body = self.read_json()
         if body is None:
             return
@@ -312,7 +336,25 @@ class Handler(BaseHTTPRequestHandler):
         print(json.dumps({"event": event, "unix": now(), "data": data}, separators=(",", ":")), flush=True)
 
 
+def validate_public_config() -> list[str]:
+    errors: list[str] = []
+    if not PUBLIC_MODE:
+        return errors
+    if TOKEN_SECRET == "development-only-change-me" or len(TOKEN_SECRET) < 32:
+        errors.append("ROOM_TOKEN_SECRET must be at least 32 characters in PUBLIC_MODE")
+    if not PUBLIC_WS_URL.startswith("wss://"):
+        errors.append("PUBLIC_WS_URL must use wss:// in PUBLIC_MODE")
+    if ALLOWED_ORIGIN == "*" or not ALLOWED_ORIGIN.startswith("https://"):
+        errors.append("ALLOWED_ORIGIN must be a specific https:// origin in PUBLIC_MODE")
+    return errors
+
+
 def main() -> None:
+    config_errors = validate_public_config()
+    if config_errors:
+        for error in config_errors:
+            print(json.dumps({"event": "lobby_config_error", "error": error}), flush=True)
+        raise SystemExit(2)
     print(json.dumps({
         "event": "lobby_started",
         "host": HOST,
@@ -320,6 +362,8 @@ def main() -> None:
         "max_rooms": MAX_ACTIVE_ROOMS,
         "max_players_per_room": MAX_PLAYERS_PER_ROOM,
         "public_ws_url": PUBLIC_WS_URL,
+        "public_mode": PUBLIC_MODE,
+        "general_rate_limit": GENERAL_REQUEST_LIMIT_PER_MINUTE,
         "warning": "ROOM_TOKEN_SECRET is using development default" if TOKEN_SECRET == "development-only-change-me" else "",
     }), flush=True)
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

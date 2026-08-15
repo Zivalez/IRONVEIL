@@ -228,7 +228,7 @@ func _build_controls_tab(tabs: TabContainer) -> void:
 	var box := _tab_box("Controls")
 	tabs.add_child(box)
 	box.add_child(_slider_row("Mouse sensitivity", 0.2, 2.0, float(SettingsManager.get_value("controls", "mouse_sensitivity", 1.0)), "controls", "mouse_sensitivity"))
-	for action in ["move_up", "move_left", "move_down", "move_right", "sprint", "interact", "attack", "camera_left", "camera_right", "journal", "lobby"]:
+	for action in ["move_up", "move_left", "move_down", "move_right", "sprint", "interact", "attack", "medical_quick", "craft_bandage", "camera_left", "camera_right", "journal", "lobby"]:
 		var row := HBoxContainer.new()
 		var label := Label.new()
 		label.text = action.replace("_", " ").capitalize()
@@ -346,21 +346,26 @@ func _build_lobby(root: Control) -> void:
 	box.add_child(close)
 
 func _build_help(root: Control) -> void:
-	help_panel = _modal_panel(Vector2(700, 420))
+	help_panel = _modal_panel(Vector2(700, 460))
 	root.add_child(help_panel)
 	var box := VBoxContainer.new()
 	help_panel.add_child(box)
 	var title := Label.new()
-	title.text = "PHASE 2 // ASHWICK VERTICAL SLICE"
+	title.text = "PHASE 3 // THREE-REGION MVP"
 	title.add_theme_font_size_override("font_size", 20)
 	box.add_child(title)
 	var help := Label.new()
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	help.custom_minimum_size = Vector2(650, 300)
-	help.text = "Move %s/%s/%s/%s  • Sprint %s  • Interact %s  • Attack %s\nRotate camera %s/%s  • Journal %s  • Lobby %s  • Settings %s\nQuick consume %s  • Craft gear %s  • Save/Load %s/%s\n\nRoute: survive Green Hollow -> revive the workshop -> automate planks -> repair Ashwick bridge -> meet Archivist Mara -> press steel plates -> enter the Foundry Vault -> use BOTH thermal relief valves -> defeat the Furnace Saint during the thermal-shock window.\n\nKnowledge is progression. If brute force fails, observe the system." % [SettingsManager.keybind_name("move_up"), SettingsManager.keybind_name("move_left"), SettingsManager.keybind_name("move_down"), SettingsManager.keybind_name("move_right"), SettingsManager.keybind_name("sprint"), SettingsManager.keybind_name("interact"), SettingsManager.keybind_name("attack"), SettingsManager.keybind_name("camera_left"), SettingsManager.keybind_name("camera_right"), SettingsManager.keybind_name("journal"), SettingsManager.keybind_name("lobby"), SettingsManager.keybind_name("settings"), SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("craft_gear"), SettingsManager.keybind_name("save"), SettingsManager.keybind_name("load")]
+	help.custom_minimum_size = Vector2(650, 340)
+	var help_text: String = "Move %s/%s/%s/%s  • Sprint %s  • Interact %s  • Attack %s" % [SettingsManager.keybind_name("move_up"), SettingsManager.keybind_name("move_left"), SettingsManager.keybind_name("move_down"), SettingsManager.keybind_name("move_right"), SettingsManager.keybind_name("sprint"), SettingsManager.keybind_name("interact"), SettingsManager.keybind_name("attack")]
+	help_text += "\nRotate camera %s/%s  • Journal %s  • Lobby %s  • Settings %s" % [SettingsManager.keybind_name("camera_left"), SettingsManager.keybind_name("camera_right"), SettingsManager.keybind_name("journal"), SettingsManager.keybind_name("lobby"), SettingsManager.keybind_name("settings")]
+	help_text += "\nConsume %s  • Medical %s  • Gear %s  • Bandage %s  • Save/Load %s/%s" % [SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("medical_quick"), SettingsManager.keybind_name("craft_gear"), SettingsManager.keybind_name("craft_bandage"), SettingsManager.keybind_name("save"), SettingsManager.keybind_name("load")]
+	help_text += "\n\nMVP route: Green Hollow/Ashwick -> Furnace Saint -> Ashlands wind industry -> steel production -> Flooded Basin irrigation -> crop harvest -> settlement barter."
+	help_text += "\n\nCraft tiers: handcraft in the field, workshop at a bench, industrial only while a live mechanical network supplies enough RPM and torque."
+	help.text = help_text
 	box.add_child(help)
 	var dismiss := Button.new()
-	dismiss.text = "Enter Green Hollow"
+	dismiss.text = "Enter the Three-Region MVP"
 	_wire_button(dismiss)
 	dismiss.pressed.connect(_on_help_close_pressed)
 	box.add_child(dismiss)
@@ -561,7 +566,7 @@ func _on_connection_state_changed(state: String, message: String) -> void:
 	_show_notification(message, "success" if state == "online" else "info")
 
 func _update_survival(survival: Dictionary) -> void:
-	status_label.text = "HP %3.0f   HUNGER %3.0f   THIRST %3.0f" % [float(survival.get("health", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0))]
+	status_label.text = "%s | HP %3.0f  STAM %3.0f  HUN %3.0f  THR %3.0f\nTEMP %.1fC  FAT %2.0f  STRESS %2.0f  MORALE %2.0f  INF %2.0f" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)), float(survival.get("health", 0.0)), float(survival.get("stamina", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0)), float(survival.get("body_temperature", 36.8)), float(survival.get("fatigue", 0.0)), float(survival.get("stress", 0.0)), float(survival.get("morale", 0.0)), float(survival.get("infection_risk", 0.0))]
 
 func _update_objective(step: int, text: String) -> void:
 	objective_label.text = "OBJECTIVE %02d/%02d\n%s" % [step + 1, GameState.OBJECTIVES.size(), text]
@@ -577,7 +582,8 @@ func _update_inventory(inventory: Dictionary) -> void:
 			var item_id: String = str(id_value)
 			lines.append("%s  x%d" % [DataRegistry.display_name(item_id), int(inventory.get(item_id, 0))])
 	lines.append("")
-	lines.append("[%s] Consume   [%s] Gear" % [SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("craft_gear")])
+	lines.append("[%s] Consume  [%s] Medical" % [SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("medical_quick")])
+	lines.append("[%s] Gear  [%s] Bandage" % [SettingsManager.keybind_name("craft_gear"), SettingsManager.keybind_name("craft_bandage")])
 	lines.append("[%s] Journal   [%s] Co-op" % [SettingsManager.keybind_name("journal"), SettingsManager.keybind_name("lobby")])
 	inventory_label.text = "\n".join(lines)
 

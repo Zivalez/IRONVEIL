@@ -32,6 +32,14 @@ const SCRIPT_PATHS: Array[String] = [
 	"res://scripts/game/occluder.gd",
 	"res://scripts/game/bridge_repair.gd",
 	"res://scripts/game/town_npc.gd",
+	"res://scripts/game/region_zone.gd",
+	"res://scripts/game/farm_plot.gd",
+	"res://scripts/game/settlement_npc.gd",
+	"res://scripts/game/workshop_bench.gd",
+	"res://scripts/game/windmill_source.gd",
+	"res://scripts/game/industrial_hammer.gd",
+	"res://scripts/game/industrial_station.gd",
+	"res://scripts/game/irrigation_pump.gd",
 	"res://scripts/game/dungeon_gate.gd",
 	"res://scripts/game/thermal_valve.gd",
 	"res://scripts/game/boss_furnace_saint.gd",
@@ -64,6 +72,8 @@ const DATA_PATHS: Array[String] = [
 	"res://data/enemies.json",
 	"res://data/biomes.json",
 	"res://data/technologies.json",
+	"res://data/crops.json",
+	"res://data/npcs.json",
 ]
 
 const REGISTRY_CATALOGS: Array[String] = [
@@ -74,6 +84,8 @@ const REGISTRY_CATALOGS: Array[String] = [
 	"enemies",
 	"biomes",
 	"technologies",
+	"crops",
+	"npcs",
 ]
 
 var failures: Array[String] = []
@@ -149,6 +161,13 @@ func _test_runtime_data_registry() -> void:
 		_fail("Phase-2 boss definition furnace_saint is missing.")
 	if (registry.call("get_biome", "ashwick_town") as Dictionary).is_empty():
 		_fail("Phase-2 Ashwick biome definition is missing.")
+	for region_id in ["green_hollow", "ashlands", "flooded_basin"]:
+		if (registry.call("get_biome", region_id) as Dictionary).is_empty():
+			_fail("Phase-3 region definition missing: %s" % region_id)
+	if (registry.call("get_crop", "field_tuber") as Dictionary).is_empty():
+		_fail("Phase-3 field_tuber crop definition is missing.")
+	if (registry.call("get_npc", "harker") as Dictionary).is_empty() or (registry.call("get_npc", "nia") as Dictionary).is_empty():
+		_fail("Phase-3 settlement NPC definitions are missing.")
 
 func _test_mechanical_network() -> void:
 	var script_resource: Script = ResourceLoader.load("res://scripts/core/mechanical_network.gd") as Script
@@ -215,6 +234,14 @@ func _test_boot_scene_runtime() -> void:
 		_fail("Phase-2 runtime smoke test did not create both thermal valves.")
 	if instance.find_child("AshwickEastBridge", true, false) == null and get_tree().get_nodes_in_group("interactable").size() < 8:
 		_fail("Phase-2 runtime smoke test created too few interactable world systems.")
+	if get_tree().get_nodes_in_group("farm_plot").size() < 3:
+		_fail("Phase-3 runtime smoke test did not create the basin farm plots.")
+	if get_tree().get_nodes_in_group("npc").size() < 2:
+		_fail("Phase-3 runtime smoke test did not create settlement NPCs.")
+	if instance.find_child("AshlandsGround", true, false) == null:
+		_fail("Phase-3 runtime smoke test did not create Ashlands.")
+	if instance.find_child("BasinGround", true, false) == null:
+		_fail("Phase-3 runtime smoke test did not create Flooded Basin.")
 
 	var game_state: Node = get_node_or_null("/root/GameState")
 	if game_state == null:

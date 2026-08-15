@@ -104,3 +104,13 @@ No room server, lobby, rate limiter, or public multiplayer transport was falsely
 - Added a static Godot String API guard to `tools/validate_project.py` so these high-confidence invalid calls fail before Dokploy.
 - Re-ran static project validation, lobby contract tests, and Python bytecode compilation successfully.
 - Godot/Docker runtime validation remains authoritative and must still pass on Dokploy before this Phase 2 candidate is marked runtime-accepted.
+
+## 2026-08-16 — Phase 3 MVP implementation candidate
+
+- Added Green Hollow/Ashlands/Flooded Basin region model.
+- Expanded survival with temperature, fatigue, stamina, stress, morale, body-part injury and infection risk.
+- Added handcraft/workshop/industrial crafting tiers.
+- Added Ashland wind industry, industrial hammer, powered precision station and basin irrigation pump.
+- Added persistent multi-factor farming and settlement barter NPCs.
+- Added Phase-3 public-mode security gates, general HTTP rate limiting and Phase-3 Compose profile.
+- Extended Godot CI/static validation contracts for Phase-3 scripts/data/world content.

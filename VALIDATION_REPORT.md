@@ -1,47 +1,31 @@
-# VALIDATION REPORT — Phase 2 Candidate
+# IRONVEIL Phase 3 Validation Report
 
+**Candidate:** Phase 3 — three-region MVP implementation  
 **Date:** 2026-08-16
 
-## Passed in this environment
+## Passed in artifact environment
 
-```text
-python tools/validate_project.py
-→ IRONVEIL STATIC VALIDATION: PASS
+- `python tools/validate_project.py` — **PASS**
+- `python tools/test_lobby_contract.py` — **PASS**
+- `python tools/test_public_security_contract.py` — **PASS**
+- Python `py_compile` for lobby/validators — **PASS**
+- Source manifest generated after cleanup.
+- Phase-3 catalogs cross-reference valid items/recipes/machines/crops/NPC barter data.
+- Static CI coverage includes all production GDScript files.
+- Phase-3 public-mode contract contains strong-secret, HTTPS-origin and WSS fail-closed checks.
 
-python tools/test_lobby_contract.py
-→ IRONVEIL LOBBY CONTRACT: PASS
+## Must still pass on Dokploy/Godot 4.7.1
 
-python -m py_compile services/lobby/lobby.py
-→ PASS
-```
+The artifact environment does not contain a runnable Godot 4.7.1 binary or Docker daemon. Therefore the following are deliberately **not claimed as passed**:
 
-The lobby contract test starts the actual lobby HTTP server on an ephemeral local port and verifies:
+- GDScript engine compile/parse gate;
+- `IRONVEIL ALL-SCRIPT COMPILE GATE: PASS`;
+- `IRONVEIL HEADLESS TESTS: PASS`;
+- Web export/runtime rendering;
+- full three-region end-to-end playthrough;
+- save/load under browser storage;
+- 2–4 client co-op/desync tests;
+- public WSS/Traefik long-session behavior;
+- force-crash checkpoint restore/resource stress.
 
-- health endpoint;
-- public room create/list;
-- room/player sanitization;
-- password not exposed in listing;
-- incorrect password rejection;
-- incorrect-password rate lockout;
-- correct password join ticket;
-- four-player reservation cap and fifth join rejection;
-- private room omitted from listing but joinable by invite room ID;
-- active-room capacity rejection.
-
-The static validator checks data cross-references, critical resource economy, master-prompt security terms, Web export/Docker contract, runtime-script CI coverage, autoload order, resource paths, known Godot 4.7 Variant-inference hazards and Phase 2 world/network/visual contracts. It also rejects common non-Godot String API calls such as `.upper()`, `.lower()`, `.startswith()`, `.endswith()`, `.strip()`, and `.splitlines()`; the reported HUD `.upper()` regression is fixed.
-
-## Not executable in this environment
-
-The environment does not currently provide a runnable Godot 4.7.1 binary or Docker daemon. Therefore these remain **unverified**, not silently marked PASS:
-
-- Godot import/compile of every GDScript;
-- `scenes/tests/ci_runner.tscn` runtime gate;
-- Web export artifact creation;
-- client Docker image build;
-- room-server Docker image build;
-- browser rendering/input;
-- 2–4 player WebSocket synchronization;
-- WSS through Dokploy/Traefik;
-- forced crash/checkpoint recovery.
-
-The Dockerfiles are structured to make the real Godot CI gate run before export/server startup so the next Dokploy build is the authoritative engine-level validation.
+Dokploy remains the authoritative runtime acceptance environment for those checks.

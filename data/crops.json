@@ -1,0 +1,15 @@
+[
+  {
+    "id": "field_tuber",
+    "name": "Field Tuber",
+    "seed_item": "seed_tuber",
+    "harvest_item": "field_tuber",
+    "harvest_count": 3,
+    "growth_seconds": 150.0,
+    "preferred_temperature_min": 10.0,
+    "preferred_temperature_max": 26.0,
+    "water_per_tick": 0.7,
+    "fertility_drain_per_tick": 0.12,
+    "pest_risk": 0.08
+  }
+]

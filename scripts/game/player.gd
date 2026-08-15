@@ -12,6 +12,7 @@ var current_prompt: String = ""
 var _gravity: float = 20.0
 var _network_accumulator: float = 0.0
 var _sprite: Sprite3D
+var _sprint_stamina_accumulator: float = 0.0
 
 func _ready() -> void:
 	add_to_group("players")
@@ -41,9 +42,24 @@ func _on_simulation_tick(delta: float) -> void:
 		world_dir = camera_rig.transform_input(input).normalized()
 	var hunger: float = float(GameState.survival.get("hunger", 100.0))
 	var thirst: float = float(GameState.survival.get("thirst", 100.0))
-	var fatigue_factor: float = 0.62 if hunger < 15.0 or thirst < 15.0 else 1.0
-	var speed: float = sprint_speed if Input.is_action_pressed("sprint") and hunger > 20.0 else move_speed
-	speed *= fatigue_factor
+	var fatigue: float = float(GameState.survival.get("fatigue", 0.0))
+	var leg_penalty: float = 0.78 if GameState.injuries.has("left_leg") or GameState.injuries.has("right_leg") else 1.0
+	var fatigue_factor: float = clampf(1.0 - fatigue / 160.0, 0.55, 1.0)
+	if hunger < 15.0 or thirst < 15.0:
+		fatigue_factor *= 0.68
+	var wants_sprint: bool = Input.is_action_pressed("sprint") and world_dir.length() > 0.1 and hunger > 20.0
+	var can_sprint: bool = wants_sprint and float(GameState.survival.get("stamina", 0.0)) > 4.0
+	var speed: float = sprint_speed if can_sprint else move_speed
+	if can_sprint:
+		_sprint_stamina_accumulator += delta
+		if _sprint_stamina_accumulator >= 0.25:
+			GameState.spend_stamina(2.5)
+			_sprint_stamina_accumulator = 0.0
+	else:
+		_sprint_stamina_accumulator = 0.0
+		if world_dir.length() < 0.1:
+			GameState.rest_recovery(delta)
+	speed *= fatigue_factor * leg_penalty
 	velocity.x = world_dir.x * speed
 	velocity.z = world_dir.z * speed
 	if not is_on_floor():
@@ -63,10 +79,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("attack"):
 		_attack()
 	elif event.is_action_pressed("eat_quick"):
-		if not GameState.consume_food("wild_berries"):
-			GameState.consume_food("spring_water")
+		if not GameState.consume_food("field_tuber"):
+			if not GameState.consume_food("wild_berries"):
+				GameState.consume_food("spring_water")
+	elif event.is_action_pressed("medical_quick"):
+		if not GameState.use_medical("bandage"):
+			GameState.use_medical("salve")
 	elif event.is_action_pressed("craft_gear"):
-		GameState.craft("crude_gear")
+		GameState.craft("crude_gear", "handcraft")
+	elif event.is_action_pressed("craft_bandage"):
+		GameState.craft("field_bandage", "handcraft")
 	elif event.is_action_pressed("save"):
 		SaveManager.save_game(self)
 	elif event.is_action_pressed("load"):
@@ -105,7 +127,11 @@ func _interact() -> void:
 func _attack() -> void:
 	if attack_cooldown > 0.0:
 		return
-	attack_cooldown = 0.55
+	if not GameState.spend_stamina(14.0):
+		GameState.notify("Too exhausted to attack effectively.", "error")
+		return
+	var arm_penalty: float = 1.25 if GameState.injuries.has("left_arm") or GameState.injuries.has("right_arm") else 1.0
+	attack_cooldown = 0.55 * arm_penalty
 	var closest: Node3D = null
 	var closest_distance: float = 2.2
 	for node_value in get_tree().get_nodes_in_group("enemy"):
@@ -117,20 +143,21 @@ func _attack() -> void:
 			closest = node
 			closest_distance = d
 	if closest != null and closest.has_method("apply_damage"):
-		closest.apply_damage(18.0)
+		closest.apply_damage(18.0 if arm_penalty <= 1.0 else 13.0)
 		GameState.notify("Strike connected.", "info")
 	else:
 		GameState.notify("You swing through empty air.", "info")
 
 func apply_damage(amount: float) -> void:
-	GameState.survival["health"] = maxf(float(GameState.survival.get("health", 100.0)) - amount, 0.0)
-	GameState.survival_changed.emit(GameState.survival.duplicate(true))
-	if float(GameState.survival["health"]) <= 0.0:
+	GameState.apply_damage(amount, "cut")
+	if float(GameState.survival.get("health", 0.0)) <= 0.0:
 		GameState.notify("You collapsed. Knowledge remains; body returns to camp.", "error")
 		global_position = Vector3(0.0, 1.0, 0.0)
 		GameState.survival["health"] = 65.0
-		GameState.survival["hunger"] = maxf(float(GameState.survival["hunger"]), 25.0)
-		GameState.survival["thirst"] = maxf(float(GameState.survival["thirst"]), 25.0)
+		GameState.survival["hunger"] = maxf(float(GameState.survival.get("hunger", 0.0)), 25.0)
+		GameState.survival["thirst"] = maxf(float(GameState.survival.get("thirst", 0.0)), 25.0)
+		GameState.survival["stress"] = minf(float(GameState.survival.get("stress", 0.0)) + 15.0, 100.0)
+		GameState.survival_changed.emit(GameState.survival.duplicate(true))
 
 func _on_survival_changed(_survival: Dictionary) -> void:
 	pass
