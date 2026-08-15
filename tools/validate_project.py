@@ -316,6 +316,33 @@ def check_no_known_variant_inference_hazards() -> None:
                 line = text.count("\n", 0, match.start()) + 1
                 fail(f"{path.relative_to(ROOT)}:{line}: risky Variant inference with :=")
 
+
+def check_no_foreign_string_api_calls() -> None:
+    # Catch common Python/JS string methods that do not exist on Godot String.
+    # Godot 4 uses methods such as to_upper(), to_lower(), begins_with(),
+    # ends_with(), and strip_edges(). The Godot runtime compile gate remains
+    # authoritative; this guard exists to stop obvious API slips earlier.
+    invalid_methods = {
+        "upper": "to_upper",
+        "lower": "to_lower",
+        "startswith": "begins_with",
+        "endswith": "ends_with",
+        "strip": "strip_edges",
+        "splitlines": "split with a newline delimiter",
+    }
+    pattern = re.compile(r"\.([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+    for path in (ROOT / "scripts").rglob("*.gd"):
+        text = strip_strings_and_comments(path.read_text(encoding="utf-8"))
+        for match in pattern.finditer(text):
+            method = match.group(1)
+            if method not in invalid_methods:
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            fail(
+                f"{path.relative_to(ROOT)}:{line}: unsupported Godot String-style call .{method}(); "
+                f"use {invalid_methods[method]} instead"
+            )
+
 def check_phase2_contract() -> None:
     project = (ROOT / "project.godot").read_text(encoding="utf-8")
     if 'NetworkManager="*res://scripts/core/network_manager.gd"' not in project:
@@ -378,6 +405,7 @@ def main() -> None:
     check_compile_gate_coverage()
     check_project_references()
     check_no_known_variant_inference_hazards()
+    check_no_foreign_string_api_calls()
     check_phase2_contract()
     print("IRONVEIL STATIC VALIDATION: PASS")
     print("Note: static validation does not replace running Godot or docker build.")

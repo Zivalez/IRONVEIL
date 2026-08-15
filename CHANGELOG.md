@@ -96,3 +96,11 @@ No room server, lobby, rate limiter, or public multiplayer transport was falsely
 - CI PASS markers are now conditioned on an empty failure list; failures exit with code 1.
 - Docker and Makefile now use the same normal-scene CI lifecycle.
 - Native Windows/Linux export presets now include `*.json` catalogs too, preventing the Web-only JSON export fix from becoming a native-build regression later.
+
+## 2026-08-16 — Phase 2 Godot 4.7 String API hardening
+
+- Fixed the Phase 2 HUD compile failure at `scripts/ui/hud.gd:598`: `String.upper()` was replaced with Godot 4.7 `String.to_upper()`.
+- Audited all GDScript files for common Python/JavaScript-style String API leakage (`upper`, `lower`, `startswith`, `endswith`, `strip`, `splitlines`).
+- Added a static Godot String API guard to `tools/validate_project.py` so these high-confidence invalid calls fail before Dokploy.
+- Re-ran static project validation, lobby contract tests, and Python bytecode compilation successfully.
+- Godot/Docker runtime validation remains authoritative and must still pass on Dokploy before this Phase 2 candidate is marked runtime-accepted.

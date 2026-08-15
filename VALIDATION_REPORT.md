@@ -28,7 +28,7 @@ The lobby contract test starts the actual lobby HTTP server on an ephemeral loca
 - private room omitted from listing but joinable by invite room ID;
 - active-room capacity rejection.
 
-The static validator checks data cross-references, critical resource economy, master-prompt security terms, Web export/Docker contract, runtime-script CI coverage, autoload order, resource paths, known Godot 4.7 Variant-inference hazards and Phase 2 world/network/visual contracts.
+The static validator checks data cross-references, critical resource economy, master-prompt security terms, Web export/Docker contract, runtime-script CI coverage, autoload order, resource paths, known Godot 4.7 Variant-inference hazards and Phase 2 world/network/visual contracts. It also rejects common non-Godot String API calls such as `.upper()`, `.lower()`, `.startswith()`, `.endswith()`, `.strip()`, and `.splitlines()`; the reported HUD `.upper()` regression is fixed.
 
 ## Not executable in this environment
 

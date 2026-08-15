@@ -595,7 +595,7 @@ func _update_journal(entries: Array) -> void:
 
 func _update_boss(name: String, health: float, max_health: float, vulnerable: bool) -> void:
 	boss_panel.visible = true
-	boss_name_label.text = name.upper()
+	boss_name_label.text = name.to_upper()
 	boss_health_bar.max_value = maxf(max_health, 1.0)
 	boss_health_bar.value = health
 	boss_state_label.text = "THERMAL JOINTS EXPOSED // STRIKE NOW" if vulnerable else "SEALED ARMOR // USE THE FOUNDRY PRESSURE SYSTEM"

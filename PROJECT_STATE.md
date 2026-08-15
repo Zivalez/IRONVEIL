@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-08-16  
 **Current phase:** **Phase 2 — Vertical Slice**  
-**Status:** Phase 2 implementation candidate. Phase 1 Web build is reported running by the owner. The expanded solo vertical-slice source, modern-pixel rendering foundation, full settings UI, lobby service and room-server foundation are implemented and statically validated. Godot/Dokploy Phase 2 runtime and 2–4 client co-op acceptance are still pending.
+**Status:** Phase 2 implementation candidate. Phase 1 Web build is reported running by the owner. The expanded solo vertical-slice source, modern-pixel rendering foundation, full settings UI, lobby service and room-server foundation are implemented and statically validated. Godot/Dokploy Phase 2 runtime and 2–4 client co-op acceptance are still pending. The reported Godot 4.7 HUD `String.upper()` compile failure has been fixed to `String.to_upper()` and guarded by static lint.
 
 ## Current Milestone
 
