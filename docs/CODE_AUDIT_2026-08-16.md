@@ -1,129 +1,105 @@
 # IRONVEIL Phase 1 — Full Source / Deployment Audit
 
 **Date:** 2026-08-16  
-**Scope:** Phase 1 First Playable source, Godot 4.7.1 Web build path, Docker/nginx deployment contract.
+**Scope:** Phase 1 First Playable, Godot 4.7.1 autoload lifecycle, script compilation, boot path, Web export, Docker/nginx deployment.
 
-## Why the earlier deployments behaved inconsistently
+## Confirmed root cause of the repeated Docker failures
 
-The first image could be exported and served while gameplay later failed after the Godot splash. The original build pipeline did not have a comprehensive Godot compile/runtime gate before export. Later revisions added a headless test, but that test itself used compile-time `preload()` dependencies. A failure inside a dependency could therefore surface only as `Could not preload ...` at the test-runner boundary, obscuring the actual source file/problem.
+The project already had valid `[autoload]` entries for `DataRegistry`, `TickManager`, `ChunkManager`, `SettingsManager`, `GameState`, `SaveManager`, and `AudioManager`.
 
-The latest Dokploy logs also proved that the previous `MechanicalNetwork` Variant-inference issue and missing `fontconfig` dependency were already fixed: project scanning completed and the next failure moved to the test runner's HUD preload boundary.
+The failing component was the **CI execution model** introduced after the original black-screen deployment. The Dockerfile ran test scripts with `godot --script`. Production gameplay scripts rely on Godot project autoload singleton names, which are designed around the normal project/scene lifecycle. The custom `--script` runner therefore created a lifecycle mismatch and emitted unresolved identifiers such as `TickManager` and `GameState`.
 
-## Audit changes
+The old compile gate also had a correctness flaw: it could reach its PASS branch even after Godot had already emitted script dependency errors, so the PASS marker was not trustworthy.
 
-### 1. Godot compile gate
+## Final CI architecture
 
-Added `scripts/tests/compile_all.gd`.
+### 1. Import cleanly
 
-It loads every runtime script independently in dependency-first order, then loads both project scenes. `main.gd` is deliberately checked last so a broken dependency is reported before the composition root.
-
-Expected success marker:
+Docker deletes `.godot`, then runs:
 
 ```text
-IRONVEIL ALL-SCRIPT COMPILE GATE: PASS
+godot --headless --path /app --import
 ```
 
-### 2. Runtime startup smoke test
+### 2. Run tests as a normal project scene
 
-`scripts/tests/run_headless_tests.gd` no longer uses a large compile-time `preload()` table.
-
-It now:
-
-- validates the mechanical network numerically;
-- validates every JSON catalog is present and parseable;
-- instantiates **`boot.tscn`**, the same entry scene used by native/Web builds;
-- waits for the boot path to attach `main.tscn`;
-- requires a player node;
-- requires an active `Camera3D`;
-- requires the water-wheel source and mechanical-saw consumer to be registered.
-
-Expected success marker:
+Docker then runs:
 
 ```text
-IRONVEIL HEADLESS TESTS: PASS
+godot --headless --path /app res://scenes/tests/ci_runner.tscn
 ```
 
-### 3. GDScript type/Variant audit
+This is intentionally **not** `--script`.
 
-Audited boundaries where Godot APIs or dictionaries return `Variant`:
+### 3. Assert autoloads first
 
-- mechanical graph queue/dictionaries;
-- JSON parsing/catalog records;
-- save-file parsing and restore;
-- journal reconstruction;
-- settings dictionary access;
-- camera raycast collider;
-- enemy drop tables;
-- audio `ResourceLoader` result;
-- player/enemy input-event narrowing.
-
-High-risk inference is replaced with explicit type conversion, `Variant` checks and casts where appropriate.
-
-The earlier Python-validator claim that `:=` was invalid in function default parameters was removed. That syntax is valid GDScript; grammar correctness is now delegated to the real Godot compile gate rather than guessed by Python regex rules.
-
-### 4. Headless compatibility
-
-`SettingsManager` skips window-only DisplayServer operations when `DisplayServer.get_name() == "headless"`. This keeps the Docker runtime smoke test from depending on a real window/display server.
-
-### 5. Data/economy integrity
-
-Static validation now verifies:
-
-- unique catalog IDs;
-- recipe input/output items exist;
-- machine input/output items exist;
-- enemy drops reference valid items;
-- biome resources reference valid items;
-- Phase 1 map contains enough Scrap to repair the wheel **and** craft the gear;
-- at least one Log and edible berry exist.
-
-### 6. Resource/path integrity
-
-Static validation verifies:
-
-- all required source-of-truth files;
-- autoload/project `res://` references;
-- `.tscn` external resource paths;
-- every runtime `.gd` is represented by the Godot compile gate;
-- every `preload("res://...")` path exists.
-
-### 7. Web export/deploy integrity
-
-Verified configuration contract:
-
-- Godot 4.7.1 CI image is pinned;
-- Compatibility renderer is configured;
-- Web threading is disabled;
-- `*.json` is explicitly included in the Web PCK;
-- nginx explicitly serves `.wasm` and `.pck` MIME types;
-- fixed-name Godot payloads are revalidated instead of cached `immutable`;
-- Docker build order is import → compile all → runtime smoke tests → Web export;
-- Docker refuses the image if `index.html`, `index.js`, `index.wasm` or `index.pck` is missing/empty.
-
-## Docker build acceptance sequence
-
-A successful Dokploy build should progress through:
+Before any compile/test PASS can occur, `ci_runner.gd` requires the following live nodes:
 
 ```text
-Godot --import
-↓
-IRONVEIL ALL-SCRIPT COMPILE GATE: PASS
-↓
-IRONVEIL HEADLESS TESTS: PASS
-↓
-Godot Web export
-↓
-index.html / index.js / index.wasm / index.pck non-empty
-↓
-nginx runtime image
+/root/DataRegistry
+/root/TickManager
+/root/ChunkManager
+/root/SettingsManager
+/root/GameState
+/root/SaveManager
+/root/AudioManager
 ```
 
-If it fails **before** the compile marker, the log should now identify the actual script/resource being loaded instead of hiding it behind the old HUD preload boundary.
+If any is missing, CI records a failure and exits non-zero.
 
-If compile passes but the runtime marker fails, parsing is no longer the issue; the failure is in startup/gameplay integration and the named smoke-test assertion should identify which invariant is missing.
+### 4. Compile/load every production runtime script
 
-## What this audit does NOT claim
+The runner loads every runtime `.gd` and both production scenes. A null/non-script result is a failure. The PASS marker is printed only while the shared failure list is still empty.
 
-The source-generation environment does not contain a Godot executable or Docker daemon, so it cannot truthfully claim that the final Godot 4.7.1 Docker build has already run here. `tools/validate_project.py` passes locally, but the next Dokploy build remains the authoritative compiler/runtime verification.
+### 5. Validate live data registry
 
-Phase 1 is therefore **not marked complete yet**. It becomes eligible for completion only after the real Web/native acceptance checklist in `PROJECT_STATE.md` is green.
+All seven JSON files must exist and parse as arrays, and the already-initialized `DataRegistry` autoload must expose non-empty dictionaries for each catalog.
+
+### 6. Validate mechanical solver
+
+The deterministic chain remains:
+
+```text
+Water wheel 32 RPM / 120 Nm
+→ 3:1 gearbox @ 90%
+→ belt @ 95%
+→ saw @ 92%
+```
+
+The gear must resolve to 96 RPM / 36 Nm, the saw must be powered above its minimum torque, and disabling the source must depower it.
+
+### 7. Reproduce the real boot path
+
+CI instantiates `boot.tscn`, not a test-only fake main. It waits for deferred startup and then requires:
+
+- `Main` attached;
+- a player in the `players` group;
+- an active `Camera3D`;
+- water-wheel mechanical node registered;
+- mechanical-saw consumer registered.
+
+### 8. Export only after CI passes
+
+Only then does Docker run Web export and require non-empty:
+
+```text
+index.html
+index.js
+index.wasm
+index.pck
+```
+
+## Additional code/deploy hardening retained
+
+- Godot 4.7 Variant-return boundaries use explicit types/casts where high-risk.
+- `SettingsManager` skips window-only calls under the headless display server.
+- `boot.gd` loads `main.tscn` as a strongly typed `PackedScene` and keeps a visible diagnostic overlay on startup failure.
+- All export presets include `*.json` runtime catalogs.
+- Web uses Compatibility renderer with threads disabled.
+- nginx explicitly maps WASM/PCK MIME types.
+- Fixed-name Web payloads are revalidated rather than cached `immutable`.
+- Phase 1 remains an **Application + root Dockerfile** deployment; Compose remains a Phase 2 consideration when room/lobby services exist.
+
+## What this audit does not claim
+
+The current execution environment cannot run Godot or Docker locally, so the final claim remains deliberately narrow: the source/CI lifecycle mismatch has been fixed and static validation passes. The next Dokploy build is the authoritative Godot runtime check.

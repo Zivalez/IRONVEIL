@@ -72,3 +72,12 @@ No room server, lobby, rate limiter, or public multiplayer transport was falsely
 - Extended static validation with runtime-script compile-gate coverage, project/scene resource-reference checks, machine/enemy/biome item-reference checks and Milestone-1 resource-economy sanity checks.
 - Docker now requires import → all-script compile gate → runtime smoke tests → Web export → non-empty `index.html/js/wasm/pck`, in that order.
 - Added a full code-audit report and updated deployment troubleshooting documentation.
+
+## 2026-08-16 — Autoload lifecycle / CI architecture correction
+- Confirmed all required manager autoloads were already present in `project.godot`; the repeated unresolved-identifier errors came from the CI execution model, not missing project configuration.
+- Removed `compile_all.gd` / `run_headless_tests.gd` as `godot --script` entry points.
+- Added `scenes/tests/ci_runner.tscn` + `scripts/tests/ci_runner.gd`, executed through a normal project scene so autoloads exist before project-aware compile/runtime checks.
+- CI now explicitly asserts seven autoload nodes, loads all production scripts and scenes, validates disk JSON and live `DataRegistry`, tests mechanical math, and reproduces the real `boot.tscn` startup path.
+- CI PASS markers are now conditioned on an empty failure list; failures exit with code 1.
+- Docker and Makefile now use the same normal-scene CI lifecycle.
+- Native Windows/Linux export presets now include `*.json` catalogs too, preventing the Web-only JSON export fix from becoming a native-build regression later.

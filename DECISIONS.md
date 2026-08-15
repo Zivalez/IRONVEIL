@@ -102,7 +102,7 @@ This file records choices made where the blueprint/master prompt did not fix an 
 - The project main scene is now `scenes/boot.tscn`; the actual First Playable remains `scenes/main.tscn`. The boot scene is intentionally tiny and has no gameplay preloads so it can surface parser/startup failures visibly.
 - Runtime JSON catalogs remain data-driven JSON for Phase 1, but the Web preset must explicitly include `*.json` because Godot does not treat arbitrary JSON as an automatically exported resource.
 - Fixed-name Web artifacts (`index.pck`, `index.wasm`, `index.js`) use revalidation rather than immutable caching. Content-hashed immutable caching can be reconsidered only if the export/deployment pipeline introduces hashed filenames.
-- A successful Docker build must run `scripts/tests/run_headless_tests.gd` before Web export so gameplay script parser failures are rejected during Dokploy build rather than discovered only in a browser.
+- **Superseded by D-013:** the old `run_headless_tests.gd` `--script` gate was removed. Docker now runs `scenes/tests/ci_runner.tscn` as a normal project scene before Web export.
 
 ## 2026-08-16 — Modern pixel art is the locked visual target
 - Final world presentation is modern pixel art / HD-2D-inspired 2.5D, not raw low-poly blockout.
@@ -113,11 +113,23 @@ This file records choices made where the blueprint/master prompt did not fix an 
 
 ## 2026-08-16 — Treat Godot parser errors as deployment blockers
 - Do not guess GDScript syntax rules in the Python validator. `:=` is valid in default parameter declarations; the previous rule that rejected it was removed.
-- The authoritative compile check is Godot itself: Docker first runs `compile_all.gd`, which loads every runtime script independently, then runs the runtime smoke tests, and only exports Web if both gates pass.
+- **Superseded by D-013/D-014:** Godot remains the authoritative compile/runtime check, but the gate is now a single normal-scene CI runner that validates autoloads, scripts, scenes, data, mechanical logic, and boot startup before export.
 - Python validation only catches high-confidence structural/data/deployment regressions and known dangerous Variant-inference patterns.
 
-### D-012 — Dependency-first compile gate
+### D-012 — Dependency-first compile gate *(superseded in execution model)*
 
-**Decision:** Compile/load runtime scripts dependency-first and load `main.gd` last; do not use a test runner made entirely of compile-time `preload()` constants.
+**Decision:** Keep independent runtime-script loading to improve diagnostics, but execute it from the normal-scene CI runner rather than a standalone `--script` process.
 
-**Reason:** A bad dependency previously made the test runner report only `Could not preload hud.gd`, masking the underlying parser/type error. Independent loading makes the Docker log identify the failing resource directly.
+**Reason:** A bad dependency previously made the test runner report only `Could not preload hud.gd`, masking the underlying parser/type error. D-013 preserves independent loading while fixing the autoload lifecycle mismatch.
+
+### D-013 — Project-aware CI must use normal scene lifecycle
+
+**Decision:** Any CI test that depends on project autoloads must be launched as a normal Godot scene (`godot --headless --path . res://scenes/tests/ci_runner.tscn`). Do not use `godot --script` for production-project compile/runtime gates.
+
+**Reason:** `project.godot` already configured all manager autoloads, but the previous custom `--script` runners produced unresolved singleton identifiers and did not faithfully reproduce native/Web startup. Godot's normal project scene lifecycle installs autoload nodes before scene content, which is exactly the lifecycle production code expects.
+
+### D-014 — CI PASS is failure-list gated
+
+**Decision:** `IRONVEIL ALL-SCRIPT COMPILE GATE: PASS` and `IRONVEIL HEADLESS TESTS: PASS` may only be printed when the shared CI failure list is empty. Any failed autoload/script/scene/data/mechanical/boot assertion ends with `SceneTree.quit(1)`.
+
+**Reason:** A diagnostic PASS that coexists with Godot load errors is worse than no gate at all because it gives Dokploy and the developer a false success signal.

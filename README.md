@@ -61,15 +61,14 @@ Or open `project.godot` in the Godot editor and run the main scene.
 python3 tools/validate_project.py
 ```
 
-Run the same two Godot gates used by Docker when Godot is installed:
+Run the same Godot gate used by Docker when Godot is installed:
 
 ```bash
 godot --headless --path . --import
-godot --headless --path . --script res://scripts/tests/compile_all.gd
-godot --headless --path . --script res://scripts/tests/run_headless_tests.gd
+godot --headless --path . res://scenes/tests/ci_runner.tscn
 ```
 
-`compile_all.gd` loads every runtime script independently before the smoke test. This prevents a dependency `preload()` from hiding the actual script that failed to compile.
+The CI runner is a **normal project scene**, not a `godot --script` entry point. That distinction is intentional: project autoloads (`TickManager`, `GameState`, `SettingsManager`, `DataRegistry`, etc.) are initialized before normal scenes, matching the lifecycle used by the actual game. The runner then loads every runtime script, validates all catalogs, tests the mechanical solver, and instantiates `boot.tscn` end-to-end. Any failure exits Godot with code 1, so Docker/Dokploy stops before Web export.
 
 ## UI SFX
 

@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-08-16  
 **Current phase:** Phase 1 — Prototype / First Playable  
-**Current status:** Full static/source audit completed. Local static validation passes; the next Dokploy build is the authoritative Godot 4.7.1 compile + runtime smoke-test gate.
+**Current status:** Autoload/CI lifecycle root cause corrected. All required autoloads are present; Docker now tests through a normal Godot scene instead of `--script`. Static validation passes; the next Dokploy build is the authoritative Godot 4.7.1 runtime gate.
 
 ## Current Milestone
 
@@ -40,7 +40,7 @@ The following systems are connected in code and are part of the current playable
 - Chunk/LOD architecture scaffold with FULL / SIMPLIFIED / STATISTICAL tiers.
 - Docker Web-export pipeline and nginx runtime configuration.
 - Native/Web export presets.
-- Dependency-first all-script Godot compile gate, runtime boot-to-gameplay smoke test, mechanical solver test and static repository validator.
+- Scene-based project-aware CI gate: verifies autoloads, all runtime scripts/scenes, live data registry, mechanical solver, and boot-to-gameplay startup before Web export.
 
 ## Intentionally Not Built Yet
 
@@ -89,9 +89,11 @@ Per the roadmap and guardrails:
 
 ## Latest Code Audit
 
-The repository has been audited end-to-end for the failure mode seen in Dokploy. The old test runner could fail at a `preload()` boundary and only report the dependent file (for example `hud.gd`) rather than the actual inner parser/type error. The build pipeline now compiles every runtime script independently before any runtime test.
+The latest Dokploy diagnostics revealed that the project autoload declarations were already correct; the failing component was the custom CI execution model. The previous test scripts were launched with `godot --script`, which did not reproduce the normal project-scene lifecycle expected by production scripts that reference `TickManager`, `GameState`, `SettingsManager`, and `DataRegistry`.
 
-Static validation currently passes, including data cross-references, scene/autoload paths, compile-gate coverage, Milestone-1 resource availability, Web-export JSON inclusion and known Godot 4.7 Variant-inference hazards. Runtime acceptance remains unchecked until Dokploy executes Godot 4.7.1.
+The build pipeline now launches `scenes/tests/ci_runner.tscn` as a normal headless project scene. The runner first verifies all required autoload nodes under `/root`, then checks every runtime script and production scene, validates disk JSON + live `DataRegistry`, tests the mechanical solver, and instantiates the real `boot.tscn` path. PASS is only printed when no failures were recorded; any failure exits Godot with code 1.
+
+Static validation currently passes, including autoload presence/order, runtime-script coverage, data cross-references, scene paths, Milestone-1 resource availability, JSON export inclusion and known Godot 4.7 Variant-inference hazards. Runtime acceptance remains unchecked until Dokploy executes this corrected lifecycle.
 
 ## Future Multiplayer Security Gate (new master prompt §4.5)
 
@@ -127,12 +129,13 @@ The first Dokploy Web deployment reached the Godot splash screen but then displa
 
 Corrective source changes are now staged:
 
-- Web export explicitly includes all JSON runtime catalogs.
-- Docker performs Godot import + headless script tests before Web export.
+- Web/Windows/Linux exports explicitly include all JSON runtime catalogs.
+- Docker performs a clean Godot import, then runs the project-aware CI as a **normal scene**, not via `--script`.
+- CI verifies every required autoload, production script/scene, live data registry, mechanical solver and the actual boot path before Web export.
 - A dedicated boot scene reports gameplay load/player/camera startup failure on-canvas.
 - Web artifacts with stable `index.*` names are no longer cached as immutable.
 
-**Current gate:** redeploy this revision, hard-refresh/clear the previous site cache once, then verify the forest scene + HUD appears and complete the First Playable loop. Phase 1 remains in progress until that runtime test passes.
+**Current gate:** redeploy this corrected lifecycle revision with a no-cache rebuild. The log must show all autoload checks plus `IRONVEIL ALL-SCRIPT COMPILE GATE: PASS` and `IRONVEIL HEADLESS TESTS: PASS` before export. Then hard-refresh/clear the previous site cache once, verify the forest scene + HUD appears, and complete the First Playable loop. Phase 1 remains in progress until that runtime test passes.
 
 ## Visual status
 - **Target locked:** modern pixel art / HD-2D-inspired isometric 2.5D with dynamic lighting, real-time shadows, pixel particles and restrained Web-compatible post-processing.
@@ -140,6 +143,6 @@ Corrective source changes are now staged:
 - Rendering contract: `docs/ART_DIRECTION_MODERN_PIXEL.md`.
 
 ## Runtime validation update — 2026-08-16
-- Dokploy reached the Godot headless test stage after the previous mechanical-network fix.
-- Current blocking parser error in `hud.gd` was fixed (`anchor_right: bool = false`).
-- Next required validation: redeploy and confirm headless tests + Web export complete, then test the browser boot scene/gameplay loop.
+- Earlier parser/type issues (`MechanicalNetwork` Variant inference and HUD parsing) were corrected.
+- The newest failure was architectural: standalone `--script` CI could not resolve project autoload singleton identifiers and its compile gate could emit a misleading PASS.
+- That CI path has now been removed. The next deployment must execute `ci_runner.tscn` through the normal project lifecycle and prove all autoload/compile/runtime checks before Web export.

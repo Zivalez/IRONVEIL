@@ -7,15 +7,14 @@ RUN apt-get update \
 WORKDIR /app
 COPY . .
 
-# CI gate order matters:
-# 1) import resources,
-# 2) compile/load every runtime script independently,
-# 3) instantiate the gameplay scene in headless mode and run deterministic tests,
-# 4) only then create the Web export.
-RUN mkdir -p /app/build \
+# The test gate MUST run through a normal project scene. Running a SceneTree
+# script via `godot --script` bypasses the lifecycle in which project autoload
+# singletons are installed, so production scripts that correctly reference
+# GameState/TickManager/etc. can fail to resolve only in CI.
+RUN rm -rf /app/.godot \
+    && mkdir -p /app/build \
     && godot --headless --path /app --import \
-    && godot --headless --path /app --script res://scripts/tests/compile_all.gd \
-    && godot --headless --path /app --script res://scripts/tests/run_headless_tests.gd \
+    && timeout 120s godot --headless --path /app res://scenes/tests/ci_runner.tscn \
     && godot --headless --path /app --export-release "Web" /app/build/index.html \
     && test -s /app/build/index.html \
     && test -s /app/build/index.js \

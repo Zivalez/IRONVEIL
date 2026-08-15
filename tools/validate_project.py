@@ -14,6 +14,8 @@ REQUIRED = [
     "export_presets.cfg",
     "scenes/boot.tscn",
     "scenes/main.tscn",
+    "scenes/tests/ci_runner.tscn",
+    "scripts/tests/ci_runner.gd",
     "scripts/game/main.gd",
     "scripts/core/game_state.gd",
     "scripts/core/mechanical_network.gd",
@@ -161,12 +163,12 @@ def check_deploy_contract() -> None:
         fail("nginx must not immutable-cache fixed-name Godot index.pck/index.wasm assets")
     if 'run/main_scene="res://scenes/boot.tscn"' not in (ROOT / "project.godot").read_text(encoding="utf-8"):
         fail("Boot diagnostics scene must be the project main scene")
-    if "compile_all.gd" not in dockerfile:
-        fail("Docker build must compile/load every runtime script before tests")
-    if "run_headless_tests.gd" not in dockerfile:
-        fail("Docker build must run Godot headless tests before Web export")
-    if dockerfile.index("compile_all.gd") > dockerfile.index("run_headless_tests.gd"):
-        fail("Docker compile gate must run before runtime headless tests")
+    if "res://scenes/tests/ci_runner.tscn" not in dockerfile:
+        fail("Docker build must run the scene-based CI runner before Web export")
+    if "--script res://scripts/tests" in dockerfile:
+        fail("Docker must not run project tests via --script; autoload lifecycle would be bypassed")
+    if dockerfile.index("ci_runner.tscn") > dockerfile.index("--export-release"):
+        fail("Scene-based CI gate must run before Web export")
 
 def strip_strings_and_comments(text: str) -> str:
     out = []
@@ -215,8 +217,8 @@ def check_gdscript_structure() -> None:
                 fail(f"{path.relative_to(ROOT)} preloads missing res://{rel}")
 
 def check_compile_gate_coverage() -> None:
-    compile_gate = (ROOT / "scripts/tests/compile_all.gd").read_text(encoding="utf-8")
-    listed = set(re.findall(r'"res://(scripts/[^"\n]+\.gd)"', compile_gate))
+    ci_runner = (ROOT / "scripts/tests/ci_runner.gd").read_text(encoding="utf-8")
+    listed = set(re.findall(r'"res://(scripts/[^"\n]+\.gd)"', ci_runner))
     runtime_scripts = {
         path.relative_to(ROOT).as_posix()
         for path in (ROOT / "scripts").rglob("*.gd")
@@ -224,7 +226,38 @@ def check_compile_gate_coverage() -> None:
     }
     missing = sorted(runtime_scripts - listed)
     if missing:
-        fail("compile_all.gd does not cover runtime scripts: " + ", ".join(missing))
+        fail("ci_runner.gd does not compile-check runtime scripts: " + ", ".join(missing))
+
+    project = (ROOT / "project.godot").read_text(encoding="utf-8")
+    required_autoloads = {
+        "DataRegistry", "TickManager", "ChunkManager", "SettingsManager",
+        "GameState", "SaveManager", "AudioManager",
+    }
+    configured = set(re.findall(r'^([A-Za-z_][A-Za-z0-9_]*)="\*res://', project, flags=re.MULTILINE))
+    missing_autoloads = sorted(required_autoloads - configured)
+    if missing_autoloads:
+        fail("project.godot is missing required autoloads: " + ", ".join(missing_autoloads))
+
+    for singleton in required_autoloads:
+        if f'"{singleton}"' not in ci_runner:
+            fail(f"ci_runner.gd does not assert autoload availability: {singleton}")
+
+    # Dependency order matters for _ready() connections even though all names are
+    # globally registered. Keep foundational services before consumers.
+    autoload_order = re.findall(r'^([A-Za-z_][A-Za-z0-9_]*)="\*res://', project, flags=re.MULTILINE)
+    required_order = [
+        "DataRegistry", "TickManager", "ChunkManager", "SettingsManager",
+        "GameState", "SaveManager", "AudioManager",
+    ]
+    positions = {name: autoload_order.index(name) for name in required_order if name in autoload_order}
+    if positions.get("TickManager", 999) > positions.get("ChunkManager", -1):
+        fail("TickManager must autoload before ChunkManager")
+    if positions.get("TickManager", 999) > positions.get("GameState", -1):
+        fail("TickManager must autoload before GameState")
+    if positions.get("DataRegistry", 999) > positions.get("GameState", -1):
+        fail("DataRegistry must autoload before GameState")
+    if positions.get("GameState", 999) > positions.get("SaveManager", -1):
+        fail("GameState must autoload before SaveManager")
 
 def check_project_references() -> None:
     project = (ROOT / "project.godot").read_text(encoding="utf-8")

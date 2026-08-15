@@ -1,16 +1,13 @@
-.PHONY: validate compile test audit run web windows linux docker
+.PHONY: validate ci audit run web windows linux docker
 
 validate:
 	python3 tools/validate_project.py
 
-compile:
+ci:
 	godot --headless --path . --import
-	godot --headless --path . --script res://scripts/tests/compile_all.gd
+	godot --headless --path . res://scenes/tests/ci_runner.tscn
 
-test:
-	godot --headless --path . --script res://scripts/tests/run_headless_tests.gd
-
-audit: validate compile test
+audit: validate ci
 
 run:
 	godot --path .

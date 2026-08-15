@@ -2,31 +2,71 @@
 
 ## Symptom: Godot splash appears, then canvas stays black
 
-The splash proves that the HTML shell is reachable and the Web boot sequence has started. It does not prove that the gameplay scene initialized successfully.
+The splash only proves that the HTML/WASM shell started. It does **not** prove that gameplay scripts, autoloads, JSON catalogs, player/camera creation, or the main scene initialized successfully.
 
-### Protections in this revision
+## Why the earlier CI revisions produced confusing failures
 
-1. `export_presets.cfg` includes `*.json` so the data-driven catalogs are present in Web exports.
-2. Docker runs Godot `--import` before export.
-3. Docker runs `scripts/tests/compile_all.gd` first. Every runtime script is loaded independently, dependency-first, so the failing script is no longer hidden behind another script's `preload()`.
-4. Docker then runs `scripts/tests/run_headless_tests.gd`, which tests the mechanical solver and instantiates `main.tscn` in headless mode; parser/runtime smoke-test failure stops the image build.
-5. `scenes/boot.tscn` is the project entry scene. It loads the gameplay scene dynamically and keeps a visible diagnostic overlay if the gameplay scene, player, or camera fails to initialize.
-6. nginx revalidates `index.js`, `index.wasm`, and `index.pck` instead of caching those fixed filenames as immutable.
+The production project correctly declares these autoloads in `project.godot`:
 
-## After redeploy
+- `DataRegistry`
+- `TickManager`
+- `ChunkManager`
+- `SettingsManager`
+- `GameState`
+- `SaveManager`
+- `AudioManager`
 
-Use a hard refresh once (`Ctrl+Shift+R`) or clear site data for the domain. This is especially important after deploying a build created before the cache-policy fix.
+The mistake was in the test lifecycle. Earlier Docker revisions invoked `compile_all.gd` and `run_headless_tests.gd` with `godot --script`. That execution path does not reproduce the normal project-scene lifecycle that installs project autoload singletons before gameplay scenes. Production scripts therefore reported `Identifier not found: GameState/TickManager/...` inside CI even though the singleton declarations themselves existed.
 
-If startup still fails, the page should now show an `IRONVEIL // BOOT SEQUENCE` failure message rather than an empty black canvas. Open browser DevTools → Console and copy the **first** Godot error; later errors are often secondary symptoms.
+The compile gate also relied too heavily on `ResourceLoader.load()` return values, so it could print a misleading PASS while Godot had already emitted script-load errors.
 
+## Current protections
+
+1. `export_presets.cfg` explicitly includes `*.json` in Web, Windows, and Linux exports.
+2. Docker removes any stale `.godot` cache and runs Godot `--import` first.
+3. CI is launched as a normal scene:
+
+   ```bash
+   godot --headless --path . res://scenes/tests/ci_runner.tscn
+   ```
+
+4. `ci_runner.tscn` first asserts that every required autoload is present under `/root`.
+5. It then loads every runtime `.gd` and both production scenes.
+6. It validates every data catalog both from disk and through the live `DataRegistry` autoload.
+7. It tests the mechanical solver numerically.
+8. It instantiates **`boot.tscn`**, the exact native/Web entry scene, then requires:
+   - `main.tscn` attached;
+   - player present;
+   - active `Camera3D` present;
+   - water-wheel graph source registered;
+   - mechanical-saw consumer registered.
+9. Any failure is accumulated and `SceneTree.quit(1)` is used. PASS is printed only if the failure list is empty.
+10. Only after this gate passes does Docker perform the Web export and verify non-empty `index.html`, `index.js`, `index.wasm`, and `index.pck`.
+11. nginx revalidates the fixed-name Godot payload files instead of caching them as immutable.
 
 ## Expected successful Docker markers
 
-Before Web export, the log should contain both:
+Before Web export, the log must contain:
 
 ```text
+IRONVEIL CI: normal-scene lifecycle started
+IRONVEIL_AUTOLOAD_OK: DataRegistry
+IRONVEIL_AUTOLOAD_OK: TickManager
+...
 IRONVEIL ALL-SCRIPT COMPILE GATE: PASS
 IRONVEIL HEADLESS TESTS: PASS
 ```
 
-If the first marker is absent, fix the first `IRONVEIL_COMPILE_CHECK` resource that Godot reports as invalid. If the compile marker passes but the runtime marker fails, the parser is no longer the problem; use the named smoke-test failure to diagnose startup/game-state integration.
+Then the Web export runs.
+
+If an autoload is absent, the first failure will explicitly say `Autoload singleton missing at runtime: ...`.
+
+If a script or scene cannot compile/load, the corresponding `IRONVEIL_COMPILE_CHECK` / `IRONVEIL_SCENE_CHECK` entry identifies it.
+
+If compile/load succeeds but startup integration fails, the boot smoke-test assertion identifies the missing invariant.
+
+## After redeploy
+
+Use a hard refresh once (`Ctrl+Shift+R`) or clear site data for the domain. This is especially important if the browser previously received an older fixed-name PCK/WASM payload.
+
+If the Docker gate passes but the browser still fails, open DevTools → Console and copy the **first** Godot error. The on-canvas `IRONVEIL // BOOT SEQUENCE` overlay is also designed to remain visible if gameplay, player, or camera startup fails.

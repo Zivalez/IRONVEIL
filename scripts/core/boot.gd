@@ -48,12 +48,12 @@ func _build_boot_overlay() -> void:
 
 func _start_gameplay() -> void:
 	_status_label.text = "Loading gameplay scene..."
-	var packed = ResourceLoader.load("res://scenes/main.tscn")
-	if packed == null or not (packed is PackedScene):
+	var packed: PackedScene = ResourceLoader.load("res://scenes/main.tscn") as PackedScene
+	if packed == null:
 		_show_failure("Gameplay scene could not be loaded.", "Open the browser developer console (F12) for the exact Godot parser/resource error.")
 		return
 
-	var gameplay := (packed as PackedScene).instantiate()
+	var gameplay: Node = packed.instantiate()
 	if gameplay == null:
 		_show_failure("Gameplay scene could not be instantiated.", "The Web export is present, but the game scene failed during startup.")
 		return
