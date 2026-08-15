@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 
-EMAIL_RE = re.compile(r"^[^\s@]{1,64}@[^\s@]{1,190}$")
+NICKNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,24}$")
 WORLD_NAME_RE = re.compile(r"[^A-Za-z0-9 _\-\.]", re.ASCII)
 SESSION_TTL_SECONDS = max(3600, int(os.getenv("SESSION_TTL_SECONDS", "2592000")))
 MAX_WORLDS_PER_ACCOUNT = max(1, int(os.getenv("MAX_WORLDS_PER_ACCOUNT", "12")))
@@ -76,12 +76,35 @@ class PersistenceStore:
                 self.sessions = dict(raw.get("sessions", {}))
                 self.worlds = dict(raw.get("worlds", {}))
                 self.invites = dict(raw.get("invites", {}))
+                # Phase 4.1 removes email identity. Preserve existing accounts by
+                # deriving a unique nickname from their old display name.
+                used: set[str] = set()
+                migrated = False
+                for account in self.accounts.values():
+                    nickname = str(account.get("nickname", "")).strip()
+                    if not NICKNAME_RE.fullmatch(nickname):
+                        seed = re.sub(r"[^A-Za-z0-9_.-]", "", str(account.get("display_name", "Survivor")))[:20]
+                        seed = seed if len(seed) >= 3 else "Survivor"
+                        nickname = seed
+                        suffix = 2
+                        while nickname.lower() in used:
+                            nickname = "%s%d" % (seed[:20], suffix)
+                            suffix += 1
+                        migrated = True
+                    account["nickname"] = nickname
+                    account["display_name"] = nickname
+                    if "email" in account:
+                        account.pop("email", None)
+                        migrated = True
+                    used.add(nickname.lower())
+                if migrated:
+                    self._save()
         except Exception as exc:
             print(json.dumps({"event": "persistence_restore_error", "error": str(exc)}), flush=True)
 
     def _save(self) -> None:
         _atomic_json(STORE_PATH, {
-            "schema_version": 1,
+            "schema_version": 2,
             "accounts": self.accounts,
             "sessions": self.sessions,
             "worlds": self.worlds,
@@ -89,7 +112,8 @@ class PersistenceStore:
         })
 
     def _public_account(self, account: dict[str, Any]) -> dict[str, Any]:
-        return {"id": account["id"], "email": account["email"], "display_name": account["display_name"]}
+        nickname = str(account["nickname"])
+        return {"id": account["id"], "nickname": nickname, "display_name": nickname}
 
     def _issue_session(self, account_id: str) -> tuple[str, int]:
         token = secrets.token_urlsafe(32)
@@ -100,23 +124,23 @@ class PersistenceStore:
         }
         return token, expires_at
 
-    def register(self, email: Any, password: Any, display_name: Any) -> dict[str, Any]:
-        normalized = str(email or "").strip().lower()
+    def register(self, nickname: Any, password: Any) -> dict[str, Any]:
+        display_nickname = str(nickname or "").strip()
+        normalized = display_nickname.lower()
         raw_password = str(password or "")
-        name = _clean_world_name(display_name)[:24]
-        if not EMAIL_RE.fullmatch(normalized):
-            raise StoreError("Enter a valid email address.")
+        if not NICKNAME_RE.fullmatch(display_nickname):
+            raise StoreError("Nickname must be 3–24 characters using letters, numbers, dot, dash, or underscore.")
         if len(raw_password) < 10 or len(raw_password) > 128:
             raise StoreError("Password must contain 10–128 characters.")
         with self.lock:
-            if any(item.get("email") == normalized for item in self.accounts.values()):
-                raise StoreError("An account already uses that email.")
+            if any(str(item.get("nickname", "")).lower() == normalized for item in self.accounts.values()):
+                raise StoreError("That nickname is already in use.")
             salt, digest = _password_hash(raw_password)
             account_id = uuid.uuid4().hex
             account = {
                 "id": account_id,
-                "email": normalized,
-                "display_name": name,
+                "nickname": display_nickname,
+                "display_name": display_nickname,
                 "password_salt": salt,
                 "password_digest": digest,
                 "created_at": _now(),
@@ -126,17 +150,17 @@ class PersistenceStore:
             self._save()
             return {"account": self._public_account(account), "session_token": token, "expires_at": expires_at}
 
-    def login(self, email: Any, password: Any) -> dict[str, Any]:
-        normalized = str(email or "").strip().lower()
+    def login(self, nickname: Any, password: Any) -> dict[str, Any]:
+        normalized = str(nickname or "").strip().lower()
         raw_password = str(password or "")
         with self.lock:
-            account = next((a for a in self.accounts.values() if a.get("email") == normalized), None)
+            account = next((a for a in self.accounts.values() if str(a.get("nickname", "")).lower() == normalized), None)
             salt = bytes.fromhex(str(account.get("password_salt", ""))) if account is not None else bytes(16)
             _, candidate = _password_hash(raw_password, salt)
             expected = str(account.get("password_digest", "")) if account is not None else "0" * 64
             valid = hmac.compare_digest(candidate, expected)
             if not valid or account is None:
-                raise StoreError("Email or password is incorrect.")
+                raise StoreError("Nickname or password is incorrect.")
             token, expires_at = self._issue_session(account["id"])
             self._save()
             return {"account": self._public_account(account), "session_token": token, "expires_at": expires_at}

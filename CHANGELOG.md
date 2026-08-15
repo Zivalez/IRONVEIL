@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.0.1-source — Dokploy authentication hotfix
+
+- Replaced email identity with case-insensitive nickname + password registration and login.
+- Added migration for legacy account records; email fields are removed from persisted account metadata.
+- Replaced the Web client's localhost API default with `https://ironveil.zvlz.dev/api` and migrate stale browser settings automatically.
+- Added same-origin nginx proxy routes for `/api/*` and `/room-ws`, so Dokploy only needs one public domain on the client service.
+- Added a domain-specific production environment template and nickname authentication contract coverage.
+
 ## 1.0.0-source — Phase 4 full-route production candidate
 
 - Added product entry, account/session flow, personal/shared world selection, invites, and cross-browser continuation.

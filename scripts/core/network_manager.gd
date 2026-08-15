@@ -232,7 +232,7 @@ func _display_name() -> String:
 	return value.substr(0, 24)
 
 func _lobby_url(path: String) -> String:
-	var base: String = str(SettingsManager.get_value("network", "lobby_url", "http://127.0.0.1:8081")).strip_edges().trim_suffix("/")
+	var base: String = str(SettingsManager.get_value("network", "lobby_url", "https://ironveil.zvlz.dev/api")).strip_edges().trim_suffix("/")
 	return base + path
 
 func _on_list_rooms_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:

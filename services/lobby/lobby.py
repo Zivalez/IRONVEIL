@@ -238,7 +238,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/auth/register":
             body = self.read_json()
             if body is not None:
-                self.store_response(lambda: PERSISTENCE.register(body.get("email"), body.get("password"), body.get("display_name")), HTTPStatus.CREATED)
+                self.store_response(lambda: PERSISTENCE.register(body.get("nickname"), body.get("password")), HTTPStatus.CREATED)
             return
         if path == "/auth/login":
             with STATE.lock:
@@ -247,7 +247,7 @@ class Handler(BaseHTTPRequestHandler):
                     return
             body = self.read_json()
             if body is not None:
-                self.store_response(lambda: PERSISTENCE.login(body.get("email"), body.get("password")))
+                self.store_response(lambda: PERSISTENCE.login(body.get("nickname"), body.get("password")))
             return
         if path == "/auth/logout":
             token = self.bearer_token()

@@ -194,24 +194,30 @@ Room WS     ws://127.0.0.1:9081
 
 Open Settings → Network and ensure Lobby API URL is `http://127.0.0.1:8081`. Press **N** for the room terminal.
 
-### Public Dokploy topology
+### Public Dokploy topology (`ironveil.zvlz.dev`)
 
-For public HTTPS co-op, deploy three endpoints/services:
+Attach only the client service (container port 80) to the public domain. Its
+nginx routes API and WebSocket traffic to the internal Compose services:
 
 ```text
-client  → https://<game-domain>
-lobby   → https://<lobby-domain>
-room    → wss://<room-domain>
+client/API  → https://ironveil.zvlz.dev and /api/*
+room WS     → wss://ironveil.zvlz.dev/room-ws
 ```
 
 Configure:
 
 ```text
 ROOM_TOKEN_SECRET=<strong random secret shared by lobby + room server>
-PUBLIC_WS_URL=wss://<room-domain>
-ALLOWED_ORIGIN=https://<game-domain>
+PUBLIC_MODE=true
+PUBLIC_WS_URL=wss://ironveil.zvlz.dev/room-ws
+ALLOWED_ORIGIN=https://ironveil.zvlz.dev
+TRUST_PROXY_HEADERS=true
 MAX_ACTIVE_ROOMS=<profiled VPS capacity>
 ```
+
+The Web client defaults to `https://ironveil.zvlz.dev/api`; old browser
+settings containing `localhost` or `127.0.0.1` are migrated automatically.
+Accounts use nickname + password only and do not collect email.
 
 The lobby can be exposed as a separate Dokploy Application or as the `lobby` service in Dokploy Compose. The room server must have WebSocket upgrade support and long-lived proxy timeouts. CPU/RAM limits are present in `docker-compose.phase2.yml` as initial testing ceilings, not final production sizing.
 

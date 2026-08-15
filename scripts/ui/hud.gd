@@ -320,7 +320,7 @@ func _build_network_settings_tab(tabs: TabContainer) -> void:
 	tabs.add_child(box)
 	var name_edit := _line_setting_row(box, "Display name", str(SettingsManager.get_value("network", "display_name", "Survivor")))
 	name_edit.text_changed.connect(_on_network_name_changed)
-	var lobby_edit := _line_setting_row(box, "Lobby API URL", str(SettingsManager.get_value("network", "lobby_url", "http://127.0.0.1:8081")))
+	var lobby_edit := _line_setting_row(box, "Lobby API URL", str(SettingsManager.get_value("network", "lobby_url", "https://ironveil.zvlz.dev/api")))
 	lobby_edit.text_changed.connect(_on_lobby_url_changed)
 	var note := Label.new()
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

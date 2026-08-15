@@ -1,4 +1,31 @@
-# Dokploy — Phase 3 MVP
+# Dokploy — IRONVEIL production
+
+## `ironveil.zvlz.dev` (recommended single-domain layout)
+
+Deploy `docker-compose.phase3.yml`, then attach the public HTTPS domain
+`ironveil.zvlz.dev` to the **client** service on container port `80`. Do not
+publish separate public domains for the lobby or room server: the bundled
+nginx forwards `/api/*` to `lobby:8080` and `/room-ws` to
+`room-server:9081` inside the Compose network.
+
+Copy `.env.phase3.example` to `.env.phase3` (or enter the same values in
+Dokploy) and replace `ROOM_TOKEN_SECRET` with one cryptographically random
+secret of at least 32 characters. The same value is injected into lobby and
+room-server by Compose.
+
+Required production values:
+
+```text
+PUBLIC_MODE=true
+ROOM_TOKEN_SECRET=<random 32+ character secret>
+PUBLIC_WS_URL=wss://ironveil.zvlz.dev/room-ws
+ALLOWED_ORIGIN=https://ironveil.zvlz.dev
+TRUST_PROXY_HEADERS=true
+```
+
+After deployment, `https://ironveil.zvlz.dev/api/health` must return HTTP 200.
+Account requests use `https://ironveil.zvlz.dev/api/auth/register`; they never
+use the visitor's `127.0.0.1`.
 
 ## Local/private test
 
@@ -13,7 +40,7 @@ Defaults:
 - lobby: `http://127.0.0.1:8081`
 - room server: `ws://127.0.0.1:9081`
 
-## Public-limited deployment
+## Public deployment on another domain
 
 Set all of the following before enabling public co-op:
 

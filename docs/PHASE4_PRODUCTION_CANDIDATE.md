@@ -1,6 +1,6 @@
 # IRONVEIL Phase 4 — Production Candidate Contract
 
-**Version:** 1.0.0 source candidate  
+**Version:** 1.0.1 source candidate  
 **Blueprint:** `IRONVEIL_FINAL_GAME_BLUEPRINT_v2.md`
 
 This source advances the prior three-region MVP into a complete beginning-to-ending Web-game route. “Production candidate” is deliberate: source and service contracts pass in the artifact environment, while the Godot 4.7.1/Web runtime and deployed 2–4-client acceptance gates still require a runtime that is not installed in this environment.
@@ -35,7 +35,7 @@ The objective chain contains 33 states and ends only after a Veil decision.
 
 ### Persistent account worlds
 
-- Register, sign in, sign out, session restoration, personal worlds, shared worlds, invite codes, member limits, and world list.
+- Nickname + password registration, sign in, sign out, session restoration, personal worlds, shared worlds, invite codes, member limits, and world list. No email is collected.
 - Server-side world and per-player snapshot split.
 - Cross-browser continuation through authenticated world loading.
 - Atomic metadata writes and checksummed rolling world checkpoints.
@@ -72,7 +72,7 @@ python3 tools/test_persistence_contract.py
 The Docker client build remains the authoritative Godot compile, headless test, and Web export gate:
 
 ```bash
-docker build --no-cache -t ironveil:1.0.0 .
+docker build --no-cache -t ironveil:1.0.1 .
 docker compose --env-file .env.phase3 -f docker-compose.phase3.yml up --build
 ```
 

@@ -6,9 +6,8 @@ var _status: Label
 var _account_label: Label
 var _auth_panel: PanelContainer
 var _world_panel: PanelContainer
-var _email: LineEdit
+var _nickname: LineEdit
 var _password: LineEdit
-var _display_name: LineEdit
 var _world_name: LineEdit
 var _invite_code: LineEdit
 var _world_list: ItemList
@@ -121,11 +120,10 @@ func _build_auth_panel() -> void:
 	heading.add_theme_font_size_override("font_size", 23)
 	box.add_child(heading)
 	var note := Label.new()
-	note.text = "One account keeps personal and shared worlds available on every browser."
+	note.text = "A nickname and password keep personal and shared worlds available on every browser."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
-	_display_name = _field(box, "DISPLAY NAME", "Field Engineer", false)
-	_email = _field(box, "EMAIL", "survivor@example.com", false)
+	_nickname = _field(box, "NICKNAME", "FieldEngineer", false)
 	_password = _field(box, "PASSWORD", "10 characters minimum", true)
 	var sign_in := Button.new()
 	sign_in.text = "SIGN IN"
@@ -253,11 +251,11 @@ func _on_world_selected(_index: int) -> void:
 
 func _sign_in() -> void:
 	_status.text = "AUTHENTICATING..."
-	AccountManager.login(_email.text, _password.text)
+	AccountManager.login(_nickname.text, _password.text)
 
 func _register() -> void:
 	_status.text = "CREATING ACCOUNT..."
-	AccountManager.register_account(_email.text, _password.text, _display_name.text)
+	AccountManager.register_account(_nickname.text, _password.text)
 
 func _create_world(kind: String) -> void:
 	_status.text = "CREATING %s WORLD..." % kind.to_upper()

@@ -7,6 +7,7 @@ signal request_failed(message: String)
 signal checkpoint_saved(world: Dictionary)
 
 const SESSION_PATH := "user://ironveil_session.json"
+const DEFAULT_LOBBY_URL := "https://ironveil.zvlz.dev/api"
 
 var account: Dictionary = {}
 var session_token: String = ""
@@ -27,14 +28,14 @@ func is_authenticated() -> bool:
 	return not session_token.is_empty() and not account.is_empty()
 
 func api_url(path: String) -> String:
-	var base: String = str(SettingsManager.get_value("network", "lobby_url", "http://127.0.0.1:8081")).trim_suffix("/")
+	var base: String = str(SettingsManager.get_value("network", "lobby_url", DEFAULT_LOBBY_URL)).trim_suffix("/")
 	return base + path
 
-func register_account(email: String, password: String, display_name: String) -> void:
-	_send("register", HTTPClient.METHOD_POST, "/auth/register", {"email": email, "password": password, "display_name": display_name}, false)
+func register_account(nickname: String, password: String) -> void:
+	_send("register", HTTPClient.METHOD_POST, "/auth/register", {"nickname": nickname, "password": password}, false)
 
-func login(email: String, password: String) -> void:
-	_send("login", HTTPClient.METHOD_POST, "/auth/login", {"email": email, "password": password}, false)
+func login(nickname: String, password: String) -> void:
+	_send("login", HTTPClient.METHOD_POST, "/auth/login", {"nickname": nickname, "password": password}, false)
 
 func logout() -> void:
 	if not session_token.is_empty():

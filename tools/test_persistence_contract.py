@@ -62,14 +62,15 @@ def main() -> int:
             else:
                 raise AssertionError("server did not become ready")
 
-            status, registered = request(base + "/auth/register", "POST", {"email": "owner@example.test", "password": "correct-horse-ironveil", "display_name": "Owner"})
+            status, registered = request(base + "/auth/register", "POST", {"nickname": "OwnerEngineer", "password": "correct-horse-ironveil"})
             assert status == 201, registered
+            assert registered["account"]["nickname"] == "OwnerEngineer" and "email" not in registered["account"]
             owner_token = registered["session_token"]
             assert request(base + "/auth/me", token=owner_token)[0] == 200
             status, refreshed = request(base + "/auth/refresh", "POST", {}, owner_token)
             assert status == 200 and refreshed["session_token"] != owner_token
             owner_token = refreshed["session_token"]
-            assert request(base + "/auth/register", "POST", {"email": "owner@example.test", "password": "correct-horse-ironveil", "display_name": "Duplicate"})[0] == 400
+            assert request(base + "/auth/register", "POST", {"nickname": "ownerengineer", "password": "correct-horse-ironveil"})[0] == 400
 
             status, world = request(base + "/worlds", "POST", {"name": "Copper Meridian", "kind": "shared", "modifiers": {"harsh_climate": True}}, owner_token)
             assert status == 201, world
@@ -79,7 +80,7 @@ def main() -> int:
             assert status == 200
 
             # A fresh login represents a second browser and must see the same server world.
-            status, login = request(base + "/auth/login", "POST", {"email": "owner@example.test", "password": "correct-horse-ironveil"})
+            status, login = request(base + "/auth/login", "POST", {"nickname": "OWNERENGINEER", "password": "correct-horse-ironveil"})
             assert status == 200
             browser_b_token = login["session_token"]
             status, listing = request(base + "/worlds", token=browser_b_token)
@@ -91,7 +92,7 @@ def main() -> int:
 
             status, invite = request(base + f"/worlds/{world_id}/invite", "POST", {}, owner_token)
             assert status == 201
-            status, member = request(base + "/auth/register", "POST", {"email": "member@example.test", "password": "another-strong-password", "display_name": "Member"})
+            status, member = request(base + "/auth/register", "POST", {"nickname": "BasinMechanic", "password": "another-strong-password"})
             assert status == 201
             status, joined = request(base + "/worlds/join", "POST", {"invite_code": invite["invite_code"]}, member["session_token"])
             assert status == 200 and joined["members"] == 2

@@ -3,6 +3,7 @@ extends Node
 signal settings_changed(section: String, key: String, value: Variant)
 
 const SETTINGS_PATH := "user://settings.cfg"
+const DEFAULT_LOBBY_URL := "https://ironveil.zvlz.dev/api"
 
 const KEYBIND_DEFAULTS := {
 	"move_left": KEY_A,
@@ -76,7 +77,7 @@ var settings: Dictionary = {
 	},
 	"network": {
 		"display_name": "Survivor",
-		"lobby_url": "http://127.0.0.1:8081",
+		"lobby_url": DEFAULT_LOBBY_URL,
 		"region": "auto",
 	},
 }
@@ -116,6 +117,13 @@ func load_settings() -> void:
 		if not binds.has(action):
 			binds[action] = KEYBIND_DEFAULTS[action]
 	settings["controls"]["keybinds"] = binds
+	_migrate_network_url()
+
+func _migrate_network_url() -> void:
+	var current: String = str(get_value("network", "lobby_url", "")).strip_edges()
+	if current.is_empty() or current.contains("127.0.0.1") or current.contains("localhost"):
+		settings["network"]["lobby_url"] = DEFAULT_LOBBY_URL
+		save_settings()
 
 func save_settings() -> void:
 	var config := ConfigFile.new()
