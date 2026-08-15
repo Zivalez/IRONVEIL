@@ -2,9 +2,9 @@ extends CharacterBody3D
 
 const ENEMY_ID := "hollow_vermin"
 var definition: Dictionary = {}
-var health := 1.0
-var attack_cooldown := 0.0
-var _gravity := 20.0
+var health: float = 1.0
+var attack_cooldown: float = 0.0
+var _gravity: float = 20.0
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -37,16 +37,16 @@ func _build_visual() -> void:
 
 func _on_simulation_tick(delta: float) -> void:
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
-	var players := get_tree().get_nodes_in_group("player")
-	if players.is_empty():
+	var players: Array[Node] = get_tree().get_nodes_in_group("player")
+	if players.is_empty() or not (players[0] is Node3D):
 		return
-	var player = players[0]
-	var distance := global_position.distance_to(player.global_position)
-	var detection_range := float(definition.get("detection_range", 0.0))
-	var attack_range := float(definition.get("attack_range", 0.0))
-	var move_speed := float(definition.get("move_speed", 0.0))
+	var player: Node3D = players[0] as Node3D
+	var distance: float = global_position.distance_to(player.global_position)
+	var detection_range: float = float(definition.get("detection_range", 0.0))
+	var attack_range: float = float(definition.get("attack_range", 0.0))
+	var move_speed: float = float(definition.get("move_speed", 0.0))
 	if distance < detection_range and distance > attack_range - 0.1:
-		var direction := (player.global_position - global_position)
+		var direction: Vector3 = player.global_position - global_position
 		direction.y = 0.0
 		direction = direction.normalized()
 		velocity.x = direction.x * move_speed
@@ -70,8 +70,11 @@ func _on_simulation_tick(delta: float) -> void:
 func apply_damage(amount: float) -> void:
 	health -= amount
 	if health <= 0.0:
-		for item_id in definition.get("drops", {}):
-			GameState.add_item(str(item_id), int(definition["drops"][item_id]))
+		var drops_value: Variant = definition.get("drops", {})
+		if drops_value is Dictionary:
+			var drops: Dictionary = drops_value
+			for item_id_variant in drops:
+				GameState.add_item(str(item_id_variant), int(drops[item_id_variant]))
 		GameState.add_journal(
 			"Hollow Vermin",
 			"Observation",

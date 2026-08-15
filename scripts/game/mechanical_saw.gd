@@ -67,12 +67,12 @@ func interact(_player: Node) -> void:
 		_store_state()
 		return
 
-	var input_item := str(definition.get("input_item", "log"))
-	var available_logs := int(GameState.inventory.get(input_item, 0))
+	var input_item: String = str(definition.get("input_item", "log"))
+	var available_logs: int = int(GameState.inventory.get(input_item, 0))
 	if available_logs <= 0:
 		GameState.notify("The saw needs Logs in its feed tray.", "error")
 		return
-	var to_load := mini(available_logs, 4 - queue_logs)
+	var to_load: int = mini(available_logs, 4 - queue_logs)
 	if to_load <= 0:
 		GameState.notify("Feed tray is already full.", "info")
 		return
@@ -84,8 +84,8 @@ func interact(_player: Node) -> void:
 	GameState.notify("Loaded %d Logs. Processing is automatic while torque is available." % to_load, "success")
 
 func _on_machine_tick(delta: float) -> void:
-	var saved_queue := int(GameState.get_flag("saw_queue", queue_logs))
-	var saved_output := int(GameState.get_flag("saw_output", output_planks))
+	var saved_queue: int = int(GameState.get_flag("saw_queue", queue_logs))
+	var saved_output: int = int(GameState.get_flag("saw_output", output_planks))
 	if saved_queue != queue_logs or saved_output != output_planks:
 		queue_logs = saved_queue
 		output_planks = saved_output
@@ -106,7 +106,7 @@ func _on_machine_tick(delta: float) -> void:
 		return
 
 	process_accumulator += delta
-	var cycle_seconds := float(definition.get("cycle_seconds", 2.5))
+	var cycle_seconds: float = float(definition.get("cycle_seconds", 2.5))
 	if process_accumulator >= cycle_seconds:
 		process_accumulator -= cycle_seconds
 		queue_logs -= int(definition.get("input_count", 1))

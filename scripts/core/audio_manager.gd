@@ -15,13 +15,13 @@ const CUES := {
 func play_ui(cue: String) -> void:
 	if not CUES.has(cue):
 		return
-	var path := BASE_PATH + str(CUES[cue])
+	var path: String = BASE_PATH + str(CUES[cue])
 	if not ResourceLoader.exists(path):
 		return
-	var stream = ResourceLoader.load(path)
+	var stream: AudioStream = ResourceLoader.load(path) as AudioStream
 	if stream == null:
 		return
-	var player := AudioStreamPlayer.new()
+	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.bus = "SFX"
 	player.stream = stream
 	add_child(player)

@@ -3,11 +3,11 @@ extends CharacterBody3D
 signal interaction_prompt_changed(text: String)
 
 var camera_rig: Node
-var move_speed := 5.2
-var sprint_speed := 7.0
-var attack_cooldown := 0.0
-var current_prompt := ""
-var _gravity := 20.0
+var move_speed: float = 5.2
+var sprint_speed: float = 7.0
+var attack_cooldown: float = 0.0
+var current_prompt: String = ""
+var _gravity: float = 20.0
 
 func _ready() -> void:
 	add_to_group("players")
@@ -41,7 +41,7 @@ func _build_visual() -> void:
 func _on_simulation_tick(delta: float) -> void:
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
 
-	var input := Vector2.ZERO
+	var input: Vector2 = Vector2.ZERO
 	if Input.is_key_pressed(KEY_A):
 		input.x -= 1.0
 	if Input.is_key_pressed(KEY_D):
@@ -52,14 +52,14 @@ func _on_simulation_tick(delta: float) -> void:
 		input.y += 1.0
 	input = input.normalized()
 
-	var world_dir := Vector3(input.x, 0.0, input.y)
+	var world_dir: Vector3 = Vector3(input.x, 0.0, input.y)
 	if camera_rig != null and camera_rig.has_method("transform_input"):
 		world_dir = camera_rig.transform_input(input).normalized()
 
-	var hunger := float(GameState.survival.get("hunger", 100.0))
-	var thirst := float(GameState.survival.get("thirst", 100.0))
-	var fatigue_factor := 0.62 if hunger < 15.0 or thirst < 15.0 else 1.0
-	var speed := sprint_speed if Input.is_key_pressed(KEY_SHIFT) and hunger > 20.0 else move_speed
+	var hunger: float = float(GameState.survival.get("hunger", 100.0))
+	var thirst: float = float(GameState.survival.get("thirst", 100.0))
+	var fatigue_factor: float = 0.62 if hunger < 15.0 or thirst < 15.0 else 1.0
+	var speed: float = sprint_speed if Input.is_key_pressed(KEY_SHIFT) and hunger > 20.0 else move_speed
 	speed *= fatigue_factor
 
 	velocity.x = world_dir.x * speed
@@ -73,9 +73,12 @@ func _on_simulation_tick(delta: float) -> void:
 	_update_prompt()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.echo):
+	if not (event is InputEventKey):
 		return
-	match event.keycode:
+	var key_event: InputEventKey = event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+	match key_event.keycode:
 		KEY_F:
 			_interact()
 		KEY_SPACE:
@@ -91,19 +94,20 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _nearest_interactable() -> Node:
 	var nearest: Node = null
-	var nearest_distance := 2.7
-	for node in get_tree().get_nodes_in_group("interactable"):
-		if not (node is Node3D):
+	var nearest_distance: float = 2.7
+	for node_value in get_tree().get_nodes_in_group("interactable"):
+		if not (node_value is Node3D):
 			continue
-		var d := global_position.distance_to(node.global_position)
+		var node: Node3D = node_value as Node3D
+		var d: float = global_position.distance_to(node.global_position)
 		if d < nearest_distance:
 			nearest = node
 			nearest_distance = d
 	return nearest
 
 func _update_prompt() -> void:
-	var node := _nearest_interactable()
-	var next_prompt := ""
+	var node: Node = _nearest_interactable()
+	var next_prompt: String = ""
 	if node != null and node.has_method("get_prompt"):
 		next_prompt = str(node.get_prompt(self))
 	if next_prompt != current_prompt:
@@ -111,7 +115,7 @@ func _update_prompt() -> void:
 		interaction_prompt_changed.emit(current_prompt)
 
 func _interact() -> void:
-	var node := _nearest_interactable()
+	var node: Node = _nearest_interactable()
 	if node == null:
 		GameState.notify("Nothing useful within reach.", "info")
 		return
@@ -123,11 +127,12 @@ func _attack() -> void:
 		return
 	attack_cooldown = 0.55
 	var closest: Node3D = null
-	var closest_distance := 2.1
-	for node in get_tree().get_nodes_in_group("enemy"):
-		if not (node is Node3D):
+	var closest_distance: float = 2.1
+	for node_value in get_tree().get_nodes_in_group("enemy"):
+		if not (node_value is Node3D):
 			continue
-		var d := global_position.distance_to(node.global_position)
+		var node: Node3D = node_value as Node3D
+		var d: float = global_position.distance_to(node.global_position)
 		if d < closest_distance:
 			closest = node
 			closest_distance = d

@@ -23,7 +23,8 @@ func _ready() -> void:
 
 func reload_all() -> void:
 	for catalog_name in CATALOGS:
-		var loaded := _load_catalog(CATALOGS[catalog_name])
+		var catalog_path: String = str(CATALOGS[catalog_name])
+		var loaded: Dictionary = _load_catalog(catalog_path)
 		set(catalog_name, loaded)
 
 func _load_catalog(path: String) -> Dictionary:
@@ -31,13 +32,17 @@ func _load_catalog(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		push_warning("Missing data catalog: %s" % path)
 		return result
-	var text := FileAccess.get_file_as_string(path)
-	var parsed = JSON.parse_string(text)
-	if typeof(parsed) != TYPE_ARRAY:
+	var text: String = FileAccess.get_file_as_string(path)
+	var parsed: Variant = JSON.parse_string(text)
+	if not (parsed is Array):
 		push_error("Catalog must be a JSON array: %s" % path)
 		return result
-	for record in parsed:
-		if typeof(record) != TYPE_DICTIONARY or not record.has("id"):
+	var records: Array = parsed
+	for record_value in records:
+		if not (record_value is Dictionary):
+			continue
+		var record: Dictionary = record_value
+		if not record.has("id"):
 			continue
 		result[str(record["id"])] = record
 	return result
@@ -52,5 +57,5 @@ func get_machine(machine_id: String) -> Dictionary:
 	return machines.get(machine_id, {})
 
 func display_name(item_id: String) -> String:
-	var item := get_item(item_id)
+	var item: Dictionary = get_item(item_id)
 	return str(item.get("name", item_id))

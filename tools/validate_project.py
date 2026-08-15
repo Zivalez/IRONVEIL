@@ -74,6 +74,35 @@ def check_data() -> None:
                 if item_id not in items:
                     fail(f"Recipe {recipe_id} references missing item {item_id}")
 
+    for machine_id, machine in loaded["machines.json"].items():
+        for key in ("input_item", "output_item"):
+            item_id = machine.get(key)
+            if item_id and item_id not in items:
+                fail(f"Machine {machine_id} references missing item {item_id}")
+
+    for enemy_id, enemy in loaded["enemies.json"].items():
+        for item_id in enemy.get("drops", {}):
+            if item_id not in items:
+                fail(f"Enemy {enemy_id} drops missing item {item_id}")
+
+    for biome_id, biome in loaded["biomes.json"].items():
+        for item_id in biome.get("resources", []):
+            if item_id not in items:
+                fail(f"Biome {biome_id} references missing resource item {item_id}")
+
+    # Milestone-1 economy sanity: enough fixed resources exist in main.gd to
+    # repair the wheel (2 Scrap), craft the gear (2 Scrap), and load the saw.
+    main = (ROOT / "scripts/game/main.gd").read_text(encoding="utf-8")
+    scrap_spawned = sum(int(q) for q in re.findall(r'_spawn_pickup\("scrap",\s*(\d+)', main))
+    log_spawned = sum(int(q) for q in re.findall(r'_spawn_pickup\("log",\s*(\d+)', main))
+    berry_spawned = sum(int(q) for q in re.findall(r'_spawn_pickup\("wild_berries",\s*(\d+)', main))
+    if scrap_spawned < 4:
+        fail("Milestone 1 requires at least 4 Scrap in the region")
+    if log_spawned < 1:
+        fail("Milestone 1 requires at least 1 Log in the region")
+    if berry_spawned < 1:
+        fail("Milestone 1 requires at least 1 edible berry in the region")
+
 def check_mechanical_math() -> None:
     # Mirror the deterministic Phase 1 chain:
     # wheel 32 RPM / 120 Nm -> 3:1 gear @90% -> belt @95% -> saw @92%
@@ -132,8 +161,12 @@ def check_deploy_contract() -> None:
         fail("nginx must not immutable-cache fixed-name Godot index.pck/index.wasm assets")
     if 'run/main_scene="res://scenes/boot.tscn"' not in (ROOT / "project.godot").read_text(encoding="utf-8"):
         fail("Boot diagnostics scene must be the project main scene")
+    if "compile_all.gd" not in dockerfile:
+        fail("Docker build must compile/load every runtime script before tests")
     if "run_headless_tests.gd" not in dockerfile:
         fail("Docker build must run Godot headless tests before Web export")
+    if dockerfile.index("compile_all.gd") > dockerfile.index("run_headless_tests.gd"):
+        fail("Docker compile gate must run before runtime headless tests")
 
 def strip_strings_and_comments(text: str) -> str:
     out = []
@@ -177,17 +210,50 @@ def check_gdscript_structure() -> None:
                     fail(f"{path.relative_to(ROOT)}: unbalanced delimiter")
         if stack:
             fail(f"{path.relative_to(ROOT)}: unbalanced delimiter at EOF")
-        # GDScript function parameters use `=` for default values. `:=` is only
-        # valid for variable declarations/type inference and causes a parser error
-        # when used in a function signature. Catch this before Docker/Godot CI.
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            stripped = line.strip()
-            if stripped.startswith("func ") and ":=" in stripped.split("->", 1)[0]:
-                fail(f"{path.relative_to(ROOT)}:{lineno}: invalid ':=' in function parameter list; use '=' with an explicit type")
-
         for rel in preload_re.findall(text):
             if not (ROOT / rel).exists():
                 fail(f"{path.relative_to(ROOT)} preloads missing res://{rel}")
+
+def check_compile_gate_coverage() -> None:
+    compile_gate = (ROOT / "scripts/tests/compile_all.gd").read_text(encoding="utf-8")
+    listed = set(re.findall(r'"res://(scripts/[^"\n]+\.gd)"', compile_gate))
+    runtime_scripts = {
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "scripts").rglob("*.gd")
+        if "/tests/" not in "/" + path.relative_to(ROOT).as_posix()
+    }
+    missing = sorted(runtime_scripts - listed)
+    if missing:
+        fail("compile_all.gd does not cover runtime scripts: " + ", ".join(missing))
+
+def check_project_references() -> None:
+    project = (ROOT / "project.godot").read_text(encoding="utf-8")
+    for rel in re.findall(r'"\*?res://([^"\n]+)"', project):
+        if not (ROOT / rel).exists():
+            fail(f"project.godot references missing res://{rel}")
+    for scene in (ROOT / "scenes").rglob("*.tscn"):
+        text = scene.read_text(encoding="utf-8")
+        for rel in re.findall(r'path="res://([^"\n]+)"', text):
+            if not (ROOT / rel).exists():
+                fail(f"{scene.relative_to(ROOT)} references missing res://{rel}")
+
+def check_no_known_variant_inference_hazards() -> None:
+    # Godot 4.7 treats inference from Variant as an error by default. This is not
+    # a GDScript parser; the Docker compile gate remains authoritative. Catch only
+    # high-confidence patterns that caused this project to fail before.
+    patterns = [
+        re.compile(r'\bvar\s+\w+\s*:=\s*[^\n]*\.pop_(?:front|back)\s*\('),
+        re.compile(r'\bvar\s+\w+\s*:=\s*[^\n]*\.get\s*\('),
+        re.compile(r'\bvar\s+\w+\s*:=\s*ResourceLoader\.load\s*\('),
+        re.compile(r'\bvar\s+\w+\s*:=\s*JSON\.parse_string\s*\('),
+    ]
+    for path in (ROOT / "scripts").rglob("*.gd"):
+        text = strip_strings_and_comments(path.read_text(encoding="utf-8"))
+        for pattern in patterns:
+            match = pattern.search(text)
+            if match:
+                line = text.count("\n", 0, match.start()) + 1
+                fail(f"{path.relative_to(ROOT)}:{line}: risky Variant inference with :=")
 
 def main() -> None:
     check_required()
@@ -196,6 +262,9 @@ def main() -> None:
     check_master_prompt_contract()
     check_deploy_contract()
     check_gdscript_structure()
+    check_compile_gate_coverage()
+    check_project_references()
+    check_no_known_variant_inference_hazards()
     print("IRONVEIL STATIC VALIDATION: PASS")
     print("Note: static validation does not replace running Godot or docker build.")
 

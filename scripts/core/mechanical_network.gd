@@ -99,22 +99,22 @@ func solve() -> void:
 
 		var children: Array = edges.get(current_id, [])
 		for child_variant in children:
-			var child_id := str(child_variant)
+			var child_id: String = str(child_variant)
 			if not nodes.has(child_id):
 				continue
 			var child: Dictionary = nodes[child_id]
-			var incoming_rpm := float(parent.get("rpm", 0.0))
-			var incoming_torque := float(parent.get("torque", 0.0))
-			var kind := str(child.get("kind", ""))
+			var incoming_rpm: float = float(parent.get("rpm", 0.0))
+			var incoming_torque: float = float(parent.get("torque", 0.0))
+			var kind: String = str(child.get("kind", ""))
 
 			if kind == "gear" or kind == "belt":
-				var ratio := float(child.get("ratio", 1.0))
-				var efficiency := float(child.get("efficiency", 1.0))
+				var ratio: float = float(child.get("ratio", 1.0))
+				var efficiency: float = float(child.get("efficiency", 1.0))
 				child["rpm"] = incoming_rpm * ratio
 				child["torque"] = (incoming_torque / maxf(ratio, 0.01)) * efficiency
 				child["powered"] = child["rpm"] > 0.0 and child["torque"] > 0.0
 			elif kind == "consumer":
-				var consumer_eff := float(child.get("efficiency", 1.0))
+				var consumer_eff: float = float(child.get("efficiency", 1.0))
 				child["rpm"] = incoming_rpm
 				child["torque"] = incoming_torque * consumer_eff
 				child["powered"] = (
@@ -143,5 +143,7 @@ func to_dict() -> Dictionary:
 	}
 
 func from_dict(data: Dictionary) -> void:
-	nodes = data.get("nodes", {}).duplicate(true)
-	edges = data.get("edges", {}).duplicate(true)
+	var nodes_value: Variant = data.get("nodes", {})
+	var edges_value: Variant = data.get("edges", {})
+	nodes = (nodes_value as Dictionary).duplicate(true) if nodes_value is Dictionary else {}
+	edges = (edges_value as Dictionary).duplicate(true) if edges_value is Dictionary else {}

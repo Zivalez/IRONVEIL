@@ -93,7 +93,7 @@ func interact(_player: Node) -> void:
 	AudioManager.play_ui("complete")
 
 func _on_machine_tick(delta: float) -> void:
-	var flag_connected := bool(GameState.get_flag("gear_connected", connected))
+	var flag_connected: bool = bool(GameState.get_flag("gear_connected", connected))
 	if flag_connected != connected:
 		connected = flag_connected
 		if connected:

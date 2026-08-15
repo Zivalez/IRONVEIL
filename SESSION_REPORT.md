@@ -1,37 +1,37 @@
-# SESSION REPORT — 2026-08-16 — Revised Master Prompt Alignment
+# SESSION REPORT — 2026-08-16 — Full Phase 1 Build Audit
 
 ## 1. Selesai
 
-Source Phase 1 sudah diselaraskan dengan master prompt terbaru. Dokumen sumber kebenaran di root sudah diganti ke versi baru, dan perubahan §4.5 keamanan/skalabilitas kini menjadi kontrak eksplisit untuk Phase 2/3 tanpa mengubah First Playable Phase 1 menjadi scope multiplayer prematur.
-
-Arsitektur Phase 2 sekarang secara eksplisit mensyaratkan max 4 pemain per room yang ditegakkan server, active-room cap, resource limit CPU/RAM, WSS, sanitasi input lobby, rate limiting sebelum publik, checkpoint/recovery, restart policy, dan logging.
+Seluruh source Phase 1 diaudit: GDScript runtime, autoload, scene references, JSON catalogs, save/settings boundaries, mechanical graph, Web export, Docker build order, nginx cache/MIME, dan headless tests. Build gate baru tidak lagi bergantung pada preload-chain test runner.
 
 ## 2. Setengah jadi
 
-Runtime Phase 1 tetap membutuhkan acceptance di Godot/native/Web/Docker. Sistem multiplayer dan kontrol keamanan runtime tidak diimplementasikan sekarang karena roadmap baru tetap menempatkan room server/lobby di Phase 2 dan gate publik penuh di Phase 3/sebelum public room release.
+Runtime acceptance belum boleh ditandai PASS sampai source ini benar-benar dibuild oleh Godot 4.7.1 di Dokploy dan Web build dimainkan end-to-end. Phase 2 tetap diblokir.
 
 ## 3. Cara test
 
 ```bash
 python3 tools/validate_project.py
+godot --headless --path . --import
+godot --headless --path . --script res://scripts/tests/compile_all.gd
 godot --headless --path . --script res://scripts/tests/run_headless_tests.gd
-godot --path .
+docker build --no-cache -t ironveil:phase1 .
 ```
 
-Ikuti `docs/MANUAL_TEST_PLAN.md`, lalu verifikasi Docker/Web seperti README. Untuk Phase 1 di Dokploy gunakan **Application + root Dockerfile + port 80**.
+Setelah container hidup, buka Web build dan jalankan First Playable sampai plank otomatis keluar.
 
 ## 4. Keputusan yang kuambil sendiri
 
-`D-011`: dokumentasikan dan enforce kontrak fase baru sekarang, tetapi jangan membuat implementasi security/network palsu sebelum room/lobby service benar-benar dibangun pada Phase 2.
+`D-012`: gunakan dependency-first independent compile gate dan hindari preload-chain sebagai compiler test. Python validator tidak lagi mencoba mengarang aturan grammar GDScript.
 
 ## 5. Masalah / risiko
 
-- Master prompt baru memperbesar acceptance surface untuk multiplayer publik; public readiness tidak boleh disamakan dengan sekadar server-authoritative.
-- Nilai max active room dan CPU/RAM per room tidak boleh ditebak sekarang; harus ditentukan dari spek VPS + profiling Phase 2.
-- WSS/reverse-proxy timeout baru bisa diverifikasi ketika endpoint room server benar-benar tersedia.
+- Environment source-generation ini tidak memiliki executable Godot/Docker, sehingga static PASS bukan klaim runtime PASS.
+- Visual Phase 1 masih blockout; modern pixel art/Hi-Bit tetap merupakan target visual resmi, bukan kondisi asset saat ini.
+- Browser yang pernah menerima cache build lama sebaiknya di-hard-refresh setelah deployment baru berhasil.
 
 ## 6. Langkah berikutnya
 
-1. Luluskan seluruh runtime checklist Phase 1.
-2. Saat Phase 2 dibuka, implement server/lobby bersama basic capacity/resource controls dari §4.5.
-3. Sebelum public co-op, luluskan seluruh checklist `docs/PHASE2_SECURITY_SCALABILITY.md`.
+1. Push clean audited source ke private GitHub.
+2. Dokploy rebuild tanpa cache dan pastikan log melewati `IRONVEIL ALL-SCRIPT COMPILE GATE: PASS` serta `IRONVEIL HEADLESS TESTS: PASS`.
+3. Mainkan First Playable via Web dan tandai acceptance runtime satu per satu.

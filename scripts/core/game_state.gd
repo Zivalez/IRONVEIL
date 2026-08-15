@@ -10,7 +10,7 @@ const MechanicalNetworkClass = preload("res://scripts/core/mechanical_network.gd
 
 var inventory: Dictionary = {}
 var survival: Dictionary = {}
-var objective_step := 0
+var objective_step: int = 0
 var journal_entries: Array[Dictionary] = []
 var flags: Dictionary = {}
 var mechanical_network: MechanicalNetwork = MechanicalNetworkClass.new()
@@ -79,12 +79,15 @@ func has_item(item_id: String, quantity: int = 1) -> bool:
 	return int(inventory.get(item_id, 0)) >= quantity
 
 func consume_food(item_id: String) -> bool:
-	var item := DataRegistry.get_item(item_id)
+	var item: Dictionary = DataRegistry.get_item(item_id)
 	if item.is_empty() or not item.has("nutrition"):
+		return false
+	var nutrition_value: Variant = item.get("nutrition", {})
+	if not (nutrition_value is Dictionary):
 		return false
 	if not remove_item(item_id, 1):
 		return false
-	var nutrition: Dictionary = item["nutrition"]
+	var nutrition: Dictionary = nutrition_value
 	survival["hunger"] = minf(100.0, float(survival["hunger"]) + float(nutrition.get("hunger", 0.0)))
 	survival["thirst"] = minf(100.0, float(survival["thirst"]) + float(nutrition.get("thirst", 0.0)))
 	survival_changed.emit(survival.duplicate(true))
@@ -94,23 +97,35 @@ func consume_food(item_id: String) -> bool:
 	return true
 
 func can_craft(recipe_id: String) -> bool:
-	var recipe := DataRegistry.get_recipe(recipe_id)
+	var recipe: Dictionary = DataRegistry.get_recipe(recipe_id)
 	if recipe.is_empty():
 		return false
-	for item_id in recipe.get("inputs", {}):
-		if not has_item(str(item_id), int(recipe["inputs"][item_id])):
+	var inputs_value: Variant = recipe.get("inputs", {})
+	if not (inputs_value is Dictionary):
+		return false
+	var inputs: Dictionary = inputs_value
+	for item_id_variant in inputs:
+		var item_id: String = str(item_id_variant)
+		if not has_item(item_id, int(inputs[item_id_variant])):
 			return false
 	return true
 
 func craft(recipe_id: String) -> bool:
-	var recipe := DataRegistry.get_recipe(recipe_id)
+	var recipe: Dictionary = DataRegistry.get_recipe(recipe_id)
 	if recipe.is_empty() or not can_craft(recipe_id):
 		notify("Missing materials for %s." % str(recipe.get("name", recipe_id)), "error")
 		return false
-	for item_id in recipe.get("inputs", {}):
-		remove_item(str(item_id), int(recipe["inputs"][item_id]))
-	for item_id in recipe.get("outputs", {}):
-		add_item(str(item_id), int(recipe["outputs"][item_id]))
+	var inputs_value: Variant = recipe.get("inputs", {})
+	var outputs_value: Variant = recipe.get("outputs", {})
+	if not (inputs_value is Dictionary) or not (outputs_value is Dictionary):
+		notify("Recipe data is invalid: %s." % recipe_id, "error")
+		return false
+	var inputs: Dictionary = inputs_value
+	var outputs: Dictionary = outputs_value
+	for item_id_variant in inputs:
+		remove_item(str(item_id_variant), int(inputs[item_id_variant]))
+	for item_id_variant in outputs:
+		add_item(str(item_id_variant), int(outputs[item_id_variant]))
 	notify("Crafted %s." % str(recipe.get("name", recipe_id)), "success")
 	add_journal(
 		"Crafting: %s" % str(recipe.get("name", recipe_id)),
@@ -120,7 +135,7 @@ func craft(recipe_id: String) -> bool:
 	return true
 
 func advance_objective(new_step: int) -> void:
-	var clamped := clampi(new_step, 0, OBJECTIVES.size() - 1)
+	var clamped: int = clampi(new_step, 0, OBJECTIVES.size() - 1)
 	if clamped <= objective_step:
 		return
 	objective_step = clamped
@@ -136,10 +151,10 @@ func add_journal(title: String, stage: String, body: String) -> void:
 	journal_entries.append({"title": title, "stage": stage, "body": body})
 	journal_changed.emit(journal_entries.duplicate(true))
 
-func set_flag(flag: String, value = true) -> void:
+func set_flag(flag: String, value: Variant = true) -> void:
 	flags[flag] = value
 
-func get_flag(flag: String, fallback = false):
+func get_flag(flag: String, fallback: Variant = false) -> Variant:
 	return flags.get(flag, fallback)
 
 func notify(message: String, kind: String = "info") -> void:
@@ -156,13 +171,30 @@ func snapshot() -> Dictionary:
 	}
 
 func restore(data: Dictionary) -> void:
-	inventory = data.get("inventory", {}).duplicate(true)
-	survival = data.get("survival", survival).duplicate(true)
-	objective_step = int(data.get("objective_step", 0))
-	journal_entries = data.get("journal_entries", []).duplicate(true)
-	flags = data.get("flags", {}).duplicate(true)
-	if data.has("mechanical_network"):
-		mechanical_network.from_dict(data["mechanical_network"])
+	var inventory_value: Variant = data.get("inventory", {})
+	if inventory_value is Dictionary:
+		inventory = (inventory_value as Dictionary).duplicate(true)
+
+	var survival_value: Variant = data.get("survival", survival)
+	if survival_value is Dictionary:
+		survival = (survival_value as Dictionary).duplicate(true)
+
+	objective_step = clampi(int(data.get("objective_step", 0)), 0, OBJECTIVES.size() - 1)
+
+	journal_entries.clear()
+	var journal_value: Variant = data.get("journal_entries", [])
+	if journal_value is Array:
+		for entry_value in journal_value:
+			if entry_value is Dictionary:
+				journal_entries.append((entry_value as Dictionary).duplicate(true))
+
+	var flags_value: Variant = data.get("flags", {})
+	if flags_value is Dictionary:
+		flags = (flags_value as Dictionary).duplicate(true)
+
+	var network_value: Variant = data.get("mechanical_network", {})
+	if network_value is Dictionary:
+		mechanical_network.from_dict(network_value as Dictionary)
 	_emit_all()
 
 func _emit_all() -> void:

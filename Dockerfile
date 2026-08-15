@@ -1,6 +1,5 @@
 FROM barichello/godot-ci:4.7.1 AS builder
 
-# godot-ci is Ubuntu-based; fontconfig removes noisy headless system-font errors.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends fontconfig \
     && rm -rf /var/lib/apt/lists/*
@@ -8,12 +7,20 @@ RUN apt-get update \
 WORKDIR /app
 COPY . .
 
-# --import waits for importable resources before export. This is safer in CI than
-# opening the editor and quitting immediately.
+# CI gate order matters:
+# 1) import resources,
+# 2) compile/load every runtime script independently,
+# 3) instantiate the gameplay scene in headless mode and run deterministic tests,
+# 4) only then create the Web export.
 RUN mkdir -p /app/build \
     && godot --headless --path /app --import \
+    && godot --headless --path /app --script res://scripts/tests/compile_all.gd \
     && godot --headless --path /app --script res://scripts/tests/run_headless_tests.gd \
-    && godot --headless --path /app --export-release "Web" /app/build/index.html
+    && godot --headless --path /app --export-release "Web" /app/build/index.html \
+    && test -s /app/build/index.html \
+    && test -s /app/build/index.js \
+    && test -s /app/build/index.wasm \
+    && test -s /app/build/index.pck
 
 FROM nginx:alpine AS runtime
 

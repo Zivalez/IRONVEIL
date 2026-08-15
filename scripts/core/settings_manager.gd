@@ -1,6 +1,6 @@
 extends Node
 
-signal settings_changed(section: String, key: String, value)
+signal settings_changed(section: String, key: String, value: Variant)
 
 const SETTINGS_PATH := "user://settings.cfg"
 
@@ -69,10 +69,14 @@ func save_settings() -> void:
 			config.set_value(section, key, settings[section][key])
 	config.save(SETTINGS_PATH)
 
-func get_value(section: String, key: String, fallback = null):
-	return settings.get(section, {}).get(key, fallback)
+func get_value(section: String, key: String, fallback: Variant = null) -> Variant:
+	var section_value: Variant = settings.get(section, {})
+	if not (section_value is Dictionary):
+		return fallback
+	var section_dict: Dictionary = section_value
+	return section_dict.get(key, fallback)
 
-func set_value(section: String, key: String, value, apply_now: bool = true) -> void:
+func set_value(section: String, key: String, value: Variant, apply_now: bool = true) -> void:
 	if not settings.has(section):
 		settings[section] = {}
 	settings[section][key] = value
@@ -86,22 +90,25 @@ func apply_all() -> void:
 	_apply_audio()
 
 func _apply_graphics() -> void:
-	var vsync_enabled := bool(get_value("graphics", "vsync", true))
-	DisplayServer.window_set_vsync_mode(
-		DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED
-	)
-
-	if OS.get_name() != "Web":
-		var fullscreen := bool(get_value("graphics", "fullscreen", false))
-		DisplayServer.window_set_mode(
-			DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+	# Godot's --headless display server has no window to configure. The CI runtime
+	# smoke test still applies non-window settings below.
+	if DisplayServer.get_name() != "headless":
+		var vsync_enabled: bool = bool(get_value("graphics", "vsync", true))
+		DisplayServer.window_set_vsync_mode(
+			DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED
 		)
-		if not fullscreen:
-			var width := int(get_value("graphics", "resolution_width", 1280))
-			var height := int(get_value("graphics", "resolution_height", 720))
-			DisplayServer.window_set_size(Vector2i(width, height))
 
-	var scale := float(get_value("graphics", "ui_scale", 1.0))
+		if OS.get_name() != "Web":
+			var fullscreen: bool = bool(get_value("graphics", "fullscreen", false))
+			DisplayServer.window_set_mode(
+				DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+			)
+			if not fullscreen:
+				var width: int = int(get_value("graphics", "resolution_width", 1280))
+				var height: int = int(get_value("graphics", "resolution_height", 720))
+				DisplayServer.window_set_size(Vector2i(width, height))
+
+	var scale: float = float(get_value("graphics", "ui_scale", 1.0))
 	get_tree().root.content_scale_factor = clampf(scale, 0.75, 1.5)
 
 func _apply_audio() -> void:
@@ -111,9 +118,9 @@ func _apply_audio() -> void:
 	_apply_bus("Ambient", "ambient", "mute_ambient")
 
 func _apply_bus(bus_name: String, volume_key: String, mute_key: String) -> void:
-	var index := AudioServer.get_bus_index(bus_name)
+	var index: int = AudioServer.get_bus_index(bus_name)
 	if index == -1:
 		return
-	var linear := clampf(float(get_value("audio", volume_key, 0.8)), 0.0, 1.0)
+	var linear: float = clampf(float(get_value("audio", volume_key, 0.8)), 0.0, 1.0)
 	AudioServer.set_bus_volume_db(index, linear_to_db(maxf(linear, 0.0001)))
 	AudioServer.set_bus_mute(index, bool(get_value("audio", mute_key, false)))

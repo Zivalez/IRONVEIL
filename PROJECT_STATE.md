@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-08-16  
 **Current phase:** Phase 1 — Prototype / First Playable  
-**Current status:** Implementation assembled; static validation targeted. Runtime acceptance still requires Godot + Docker execution.
+**Current status:** Full static/source audit completed. Local static validation passes; the next Dokploy build is the authoritative Godot 4.7.1 compile + runtime smoke-test gate.
 
 ## Current Milestone
 
@@ -40,7 +40,7 @@ The following systems are connected in code and are part of the current playable
 - Chunk/LOD architecture scaffold with FULL / SIMPLIFIED / STATISTICAL tiers.
 - Docker Web-export pipeline and nginx runtime configuration.
 - Native/Web export presets.
-- Headless mechanical solver test and static repository validator.
+- Dependency-first all-script Godot compile gate, runtime boot-to-gameplay smoke test, mechanical solver test and static repository validator.
 
 ## Intentionally Not Built Yet
 
@@ -72,7 +72,7 @@ Per the roadmap and guardrails:
 
 ### Runtime verification — MUST be checked on a machine with Godot/Docker
 
-- [ ] Godot project imports with zero parser/runtime errors.
+- [ ] Godot project imports with zero parser/runtime errors on the next real Godot/Dokploy run.
 - [ ] Start → final plank loop can be played without a crash.
 - [ ] Hunger/thirst visibly tick and cause health loss at zero.
 - [ ] Water wheel repair actually enables graph power.
@@ -86,6 +86,12 @@ Per the roadmap and guardrails:
 - [ ] Web build loads and is playable in browser from the nginx container.
 
 **Phase 2 is blocked until every runtime item above is green.**
+
+## Latest Code Audit
+
+The repository has been audited end-to-end for the failure mode seen in Dokploy. The old test runner could fail at a `preload()` boundary and only report the dependent file (for example `hud.gd`) rather than the actual inner parser/type error. The build pipeline now compiles every runtime script independently before any runtime test.
+
+Static validation currently passes, including data cross-references, scene/autoload paths, compile-gate coverage, Milestone-1 resource availability, Web-export JSON inclusion and known Godot 4.7 Variant-inference hazards. Runtime acceptance remains unchecked until Dokploy executes Godot 4.7.1.
 
 ## Future Multiplayer Security Gate (new master prompt §4.5)
 

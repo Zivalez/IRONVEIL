@@ -1,10 +1,16 @@
-.PHONY: validate test run web windows linux docker
+.PHONY: validate compile test audit run web windows linux docker
 
 validate:
 	python3 tools/validate_project.py
 
+compile:
+	godot --headless --path . --import
+	godot --headless --path . --script res://scripts/tests/compile_all.gd
+
 test:
 	godot --headless --path . --script res://scripts/tests/run_headless_tests.gd
+
+audit: validate compile test
 
 run:
 	godot --path .
@@ -22,4 +28,4 @@ linux:
 	godot --headless --path . --export-release "Linux" build/IRONVEIL.x86_64
 
 docker:
-	docker build -t ironveil:phase1 .
+	docker build --no-cache -t ironveil:phase1 .

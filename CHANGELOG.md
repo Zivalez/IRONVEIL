@@ -59,7 +59,16 @@ No room server, lobby, rate limiter, or public multiplayer transport was falsely
 - Locked modern pixel art / HD-2D-inspired 2.5D as the final visual direction and documented the Web/Compatibility-safe rendering contract.
 - Explicitly classified current primitive geometry as gameplay blockout rather than final art.
 
-## 2026-08-16 — HUD parser fix
-- Fixed invalid `:=` default-parameter syntax in `scripts/ui/hud.gd`; Godot requires `anchor_right: bool = false`.
-- Extended static validation to reject `:=` inside function parameter lists before Docker deployment.
-- Confirmed prior mechanical-network compile fix and fontconfig Docker fix are present.
+## 2026-08-16 — HUD hardening
+- Reworked `scripts/ui/hud.gd` to use conservative explicit typing and named callbacks.
+- Corrected an earlier audit mistake: GDScript does allow `:=` in default parameter declarations; the false validator rule was removed.
+- Confirmed prior mechanical-network Variant-inference fix and fontconfig Docker fix are present.
+
+## 2026-08-16 — Full Phase 1 source audit
+- Added `scripts/tests/compile_all.gd`, which independently loads every runtime script and both entry scenes before runtime tests.
+- Reworked the headless test runner to avoid compile-time preload chains and added a real boot-to-gameplay smoke test (player, active camera, water-wheel source and saw consumer).
+- Audited GDScript Variant boundaries across GameState, save/load, JSON catalogs, player/enemy input, camera raycasts, settings and audio loading; risky values now use explicit `Variant` checks/casts or concrete types.
+- Made SettingsManager skip window-only DisplayServer operations under Godot `--headless`, while still applying non-window settings for CI smoke tests.
+- Extended static validation with runtime-script compile-gate coverage, project/scene resource-reference checks, machine/enemy/biome item-reference checks and Milestone-1 resource-economy sanity checks.
+- Docker now requires import → all-script compile gate → runtime smoke tests → Web export → non-empty `index.html/js/wasm/pck`, in that order.
+- Added a full code-audit report and updated deployment troubleshooting documentation.

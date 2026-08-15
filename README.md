@@ -61,11 +61,15 @@ Or open `project.godot` in the Godot editor and run the main scene.
 python3 tools/validate_project.py
 ```
 
-Run the Godot headless logic test when Godot is installed:
+Run the same two Godot gates used by Docker when Godot is installed:
 
 ```bash
+godot --headless --path . --import
+godot --headless --path . --script res://scripts/tests/compile_all.gd
 godot --headless --path . --script res://scripts/tests/run_headless_tests.gd
 ```
+
+`compile_all.gd` loads every runtime script independently before the smoke test. This prevents a dependency `preload()` from hiding the actual script that failed to compile.
 
 ## UI SFX
 

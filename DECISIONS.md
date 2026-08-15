@@ -112,5 +112,12 @@ This file records choices made where the blueprint/master prompt did not fix an 
 - Current primitive meshes are explicitly classified as Phase 1 blockout, not final graphics. See `docs/ART_DIRECTION_MODERN_PIXEL.md`.
 
 ## 2026-08-16 — Treat Godot parser errors as deployment blockers
-- Function default parameters must use explicit typed `=` syntax in Phase 1 code.
-- Static validation now mirrors this parser rule so the same class of mistake is caught before Dokploy.
+- Do not guess GDScript syntax rules in the Python validator. `:=` is valid in default parameter declarations; the previous rule that rejected it was removed.
+- The authoritative compile check is Godot itself: Docker first runs `compile_all.gd`, which loads every runtime script independently, then runs the runtime smoke tests, and only exports Web if both gates pass.
+- Python validation only catches high-confidence structural/data/deployment regressions and known dangerous Variant-inference patterns.
+
+### D-012 — Dependency-first compile gate
+
+**Decision:** Compile/load runtime scripts dependency-first and load `main.gd` last; do not use a test runner made entirely of compile-time `preload()` constants.
+
+**Reason:** A bad dependency previously made the test runner report only `Could not preload hud.gd`, masking the underlying parser/type error. Independent loading makes the Docker log identify the failing resource directly.

@@ -59,7 +59,7 @@ func interact(_player: Node) -> void:
 		_store_state()
 		GameState.notify("Collected pressed plates.", "success")
 		return
-	var input_item := str(definition.get("input_item", "scrap"))
+	var input_item: String = str(definition.get("input_item", "scrap"))
 	if GameState.has_item(input_item, int(definition.get("input_count", 1))):
 		GameState.remove_item(input_item, int(definition.get("input_count", 1)))
 		queue_scrap += 1
@@ -69,8 +69,8 @@ func interact(_player: Node) -> void:
 		GameState.notify("No Scrap to load.", "error")
 
 func _on_machine_tick(delta: float) -> void:
-	var saved_queue := int(GameState.get_flag("press_queue", queue_scrap))
-	var saved_output := int(GameState.get_flag("press_output", output_plate))
+	var saved_queue: int = int(GameState.get_flag("press_queue", queue_scrap))
+	var saved_output: int = int(GameState.get_flag("press_output", output_plate))
 	if saved_queue != queue_scrap or saved_output != output_plate:
 		queue_scrap = saved_queue
 		output_plate = saved_output
@@ -86,7 +86,7 @@ func _on_machine_tick(delta: float) -> void:
 	process_accumulator += delta
 	if ram != null:
 		ram.position.y = 1.25 + sin(Time.get_ticks_msec() * 0.01) * 0.15
-	var cycle_seconds := float(definition.get("cycle_seconds", 3.0))
+	var cycle_seconds: float = float(definition.get("cycle_seconds", 3.0))
 	if process_accumulator >= cycle_seconds:
 		process_accumulator -= cycle_seconds
 		queue_scrap -= 1
