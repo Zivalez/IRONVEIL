@@ -114,3 +114,16 @@ The UI SFX mapping is implemented, but binary `.ogg` files from the `uisfx` mech
 2. Open with Godot 4.7.1, run the headless test, then manually complete the entire First Playable loop.
 3. Export Windows/Linux/Web and verify the Docker/browser path. Only after those checks pass, mark Milestone 1 complete and begin Phase 2.
 4. When Phase 2 begins, implement the capacity/resource-limit foundation from `docs/PHASE2_SECURITY_SCALABILITY.md`; before any public room release, complete its full anti-abuse/WSS/resilience checklist.
+
+## Web runtime incident — 2026-08-16
+
+The first Dokploy Web deployment reached the Godot splash screen but then displayed a black canvas. This proves the public HTML/WebAssembly boot path is reachable, but does **not** satisfy Phase 1 runtime acceptance.
+
+Corrective source changes are now staged:
+
+- Web export explicitly includes all JSON runtime catalogs.
+- Docker performs Godot import + headless script tests before Web export.
+- A dedicated boot scene reports gameplay load/player/camera startup failure on-canvas.
+- Web artifacts with stable `index.*` names are no longer cached as immutable.
+
+**Current gate:** redeploy this revision, hard-refresh/clear the previous site cache once, then verify the forest scene + HUD appears and complete the First Playable loop. Phase 1 remains in progress until that runtime test passes.

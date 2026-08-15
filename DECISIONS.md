@@ -96,3 +96,10 @@ This file records choices made where the blueprint/master prompt did not fix an 
 
 **Reason:** The revised source of truth explicitly places these controls with the multiplayer stack and public-deployment gate. Adding runtime security code before the services exist would violate the no-big-bang/phase-order rules and produce untestable dead infrastructure.
 
+
+## 2026-08-16 — Web deployment reliability
+
+- The project main scene is now `scenes/boot.tscn`; the actual First Playable remains `scenes/main.tscn`. The boot scene is intentionally tiny and has no gameplay preloads so it can surface parser/startup failures visibly.
+- Runtime JSON catalogs remain data-driven JSON for Phase 1, but the Web preset must explicitly include `*.json` because Godot does not treat arbitrary JSON as an automatically exported resource.
+- Fixed-name Web artifacts (`index.pck`, `index.wasm`, `index.js`) use revalidation rather than immutable caching. Content-hashed immutable caching can be reconsidered only if the export/deployment pipeline introduces hashed filenames.
+- A successful Docker build must run `scripts/tests/run_headless_tests.gd` before Web export so gameplay script parser failures are rejected during Dokploy build rather than discovered only in a browser.

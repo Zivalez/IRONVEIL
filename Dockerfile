@@ -3,8 +3,11 @@ FROM barichello/godot-ci:4.7.1 AS builder
 WORKDIR /app
 COPY . .
 
+# --import waits for importable resources before export. This is safer in CI than
+# opening the editor and quitting immediately.
 RUN mkdir -p /app/build \
-    && godot --headless --editor --path /app --quit \
+    && godot --headless --path /app --import \
+    && godot --headless --path /app --script res://scripts/tests/run_headless_tests.gd \
     && godot --headless --path /app --export-release "Web" /app/build/index.html
 
 FROM nginx:alpine AS runtime

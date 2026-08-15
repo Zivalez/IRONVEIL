@@ -2,10 +2,28 @@ extends SceneTree
 
 const MechanicalNetworkClass = preload("res://scripts/core/mechanical_network.gd")
 
+# Force the Phase 1 runtime scripts to be parsed in CI before Web export.
+# A parser error in any of these used to survive static validation and only
+# appear as a black canvas after the Godot splash screen.
+const Phase1MainScript = preload("res://scripts/game/main.gd")
+const Phase1PlayerScript = preload("res://scripts/game/player.gd")
+const Phase1CameraScript = preload("res://scripts/game/camera_rig.gd")
+const Phase1PickupScript = preload("res://scripts/game/pickup.gd")
+const Phase1WorkshopScript = preload("res://scripts/game/workshop_sign.gd")
+const Phase1WheelScript = preload("res://scripts/game/water_wheel.gd")
+const Phase1GearScript = preload("res://scripts/game/gear_assembly.gd")
+const Phase1SawScript = preload("res://scripts/game/mechanical_saw.gd")
+const Phase1PressScript = preload("res://scripts/game/mechanical_press.gd")
+const Phase1EnemyScript = preload("res://scripts/game/enemy.gd")
+const Phase1HUDScript = preload("res://scripts/ui/hud.gd")
+const Phase1OccluderScript = preload("res://scripts/game/occluder.gd")
+const BootScript = preload("res://scripts/core/boot.gd")
+
 func _init() -> void:
 	var failures: Array[String] = []
 	_test_mechanical_network(failures)
 	_test_data_files(failures)
+	_test_main_scene_load(failures)
 
 	if failures.is_empty():
 		print("IRONVEIL HEADLESS TESTS: PASS")
@@ -57,3 +75,8 @@ func _test_data_files(failures: Array[String]) -> void:
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
 		if typeof(parsed) != TYPE_ARRAY:
 			failures.append("Data catalog is not a JSON array: %s" % path)
+
+func _test_main_scene_load(failures: Array[String]) -> void:
+	var packed = ResourceLoader.load("res://scenes/main.tscn")
+	if packed == null or not (packed is PackedScene):
+		failures.append("Phase 1 gameplay scene could not be parsed/loaded.")

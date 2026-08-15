@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "project.godot",
     "export_presets.cfg",
+    "scenes/boot.tscn",
     "scenes/main.tscn",
     "scripts/game/main.gd",
     "scripts/core/game_state.gd",
@@ -117,6 +118,8 @@ def check_deploy_contract() -> None:
     presets = (ROOT / "export_presets.cfg").read_text(encoding="utf-8")
     if 'name="Web"' not in presets or 'variant/thread_support=false' not in presets:
         fail("Web preset must exist with thread support disabled")
+    if 'include_filter="*.json"' not in presets:
+        fail("Web preset must explicitly include JSON runtime catalogs")
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     if "barichello/godot-ci:4.7.1" not in dockerfile:
         fail("Docker builder is not pinned to Godot CI 4.7.1")
@@ -125,6 +128,12 @@ def check_deploy_contract() -> None:
         fail("nginx does not explicitly map .wasm")
     if "application/octet-stream pck;" not in nginx:
         fail("nginx does not explicitly map .pck")
+    if "immutable" in nginx:
+        fail("nginx must not immutable-cache fixed-name Godot index.pck/index.wasm assets")
+    if 'run/main_scene="res://scenes/boot.tscn"' not in (ROOT / "project.godot").read_text(encoding="utf-8"):
+        fail("Boot diagnostics scene must be the project main scene")
+    if "run_headless_tests.gd" not in dockerfile:
+        fail("Docker build must run Godot headless tests before Web export")
 
 def strip_strings_and_comments(text: str) -> str:
     out = []

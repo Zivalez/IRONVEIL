@@ -43,3 +43,11 @@ Runtime execution, native exports and Docker/Web acceptance were not performed i
 
 No room server, lobby, rate limiter, or public multiplayer transport was falsely added to Phase 1. Those systems remain blocked until the First Playable runtime acceptance gate passes, exactly as required by the revised roadmap.
 
+
+## 2026-08-16 — Web black-screen hardening
+
+- Fixed Web export preset so runtime JSON catalogs under `res://data/*.json` are included in the exported PCK.
+- Replaced immediate editor quit in Docker with the official headless `--import` flow before export.
+- Added Godot headless runtime-script parsing/tests as a mandatory Docker build gate.
+- Added a minimal boot diagnostics scene that only hands control to gameplay after a player and active Camera3D exist; startup failures now display an on-canvas diagnostic instead of leaving an unexplained black canvas.
+- Removed `immutable` caching for fixed-name Godot `index.pck`, `index.wasm`, and JS assets so redeploys cannot mix new HTML with stale engine/project payloads.
