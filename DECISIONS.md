@@ -165,3 +165,13 @@ Room membership, movement acceptance and shared progression flags are server-rou
 - Farming complexity comes from five interacting factors; powered irrigation reduces repetitive watering.
 - Public co-op is fail-closed through `PUBLIC_MODE`: strong secret + HTTPS origin + WSS endpoint are mandatory.
 - Owner's explicit request advances implementation to Phase 3, but unresolved Phase-2 runtime/co-op acceptance remains documented rather than marked passed.
+
+## 2026-08-16 — Phase 4 production decisions
+
+- Keep Godot 4.7.1 + HTML5 + Docker/Dokploy as the product architecture; do not replace the game with a conventional JavaScript dashboard.
+- Use one standard-library Python gateway for account, world persistence, lobby, and ticket issuance to retain the existing zero-framework service footprint.
+- Store account/world metadata atomically and keep checksummed rolling world snapshots as separate files. The API boundary permits a later PostgreSQL adapter without changing clients.
+- Use a stable `w-<world_id>` room identity for each persistent shared world and require account membership before issuing its room ticket.
+- Keep personal character inventory/status separate from shared progression, crops, containers, machines, bosses, and traversal state.
+- Implement the complete critical path and all three endings without claiming the blueprint's 60–100-hour ambition before measured content/playtime validation.
+- Treat local static/service tests as source gates only; Godot/Web, deployed persistence, WSS, multi-client, recovery, performance, and screenshot-quality gates remain runtime facts.

@@ -2,8 +2,11 @@ extends Node3D
 
 var target: Node3D
 var yaw: float = deg_to_rad(45.0)
+var target_yaw: float = deg_to_rad(45.0)
 var distance: float = 18.0
 var height: float = 16.0
+var follow_damping: float = 7.5
+var look_ahead_seconds: float = 0.34
 var camera: Camera3D
 var _last_occluder: Node = null
 
@@ -16,18 +19,27 @@ func _ready() -> void:
 	_update_camera_transform()
 	SettingsManager.settings_changed.connect(_on_settings_changed)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if target != null:
-		global_position = target.global_position
+		var velocity_value: Vector3 = target.velocity if target is CharacterBody3D else Vector3.ZERO
+		var desired: Vector3 = target.global_position + Vector3(velocity_value.x, 0.0, velocity_value.z) * look_ahead_seconds
+		desired.x = clampf(desired.x, -18.0, 374.0)
+		desired.z = clampf(desired.z, -23.0, 23.0)
+		var reduced_motion: bool = bool(SettingsManager.get_value("accessibility", "reduced_motion", false))
+		var weight: float = 1.0 if reduced_motion else 1.0 - exp(-follow_damping * delta)
+		global_position = global_position.lerp(desired, weight)
+	yaw = lerp_angle(yaw, target_yaw, 1.0 - exp(-10.0 * delta))
 	_update_camera_transform()
 	_update_occlusion()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if bool(SettingsManager.get_value("gameplay", "camera_rotation", true)):
 		if event.is_action_pressed("camera_left"):
-			yaw += deg_to_rad(90.0)
+			target_yaw += deg_to_rad(90.0)
 		elif event.is_action_pressed("camera_right"):
-			yaw -= deg_to_rad(90.0)
+			target_yaw -= deg_to_rad(90.0)
+		elif event.is_action_pressed("camera_reset"):
+			target_yaw = deg_to_rad(45.0)
 	if event is InputEventMouseButton:
 		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
 		if mouse_event.pressed:

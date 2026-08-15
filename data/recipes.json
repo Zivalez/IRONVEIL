@@ -99,5 +99,10 @@
       "salve": 1
     },
     "knowledge": "field_medicine"
-  }
+  },
+  {"id":"pressure_vessel","name":"Pressure Vessel","tier":"industrial","inputs":{"pressure_alloy":2,"steel_beam":1},"outputs":{"pressure_vessel":1},"knowledge":"steam_engineering"},
+  {"id":"copper_coil","name":"Copper Coil","tier":"industrial","inputs":{"deep_ore":1,"precision_component":1},"outputs":{"copper_coil":2},"knowledge":"electricity"},
+  {"id":"industrial_relay","name":"Industrial Relay","tier":"industrial","inputs":{"copper_coil":1,"pressed_plate":1},"outputs":{"relay":1},"knowledge":"logic_automation"},
+  {"id":"rail_segment","name":"Rail Segment","tier":"industrial","inputs":{"steel_beam":1,"pressed_plate":1},"outputs":{"rail_segment":2},"knowledge":"rail_engineering"},
+  {"id":"gateway_interface","name":"Gateway Interface","tier":"industrial","inputs":{"relay_core":1,"ancient_circuit":2,"veil_crystal":2,"relay":2},"outputs":{"gateway_interface":1},"knowledge":"veil_studies"}
 ]

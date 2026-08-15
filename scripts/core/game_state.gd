@@ -26,6 +26,7 @@ var current_region_id: String = "green_hollow"
 var ambient_temperature: float = 18.0
 var mechanical_network: MechanicalNetwork = MechanicalNetworkClass.new()
 var _applying_remote_flag: bool = false
+var _applying_remote_world_object: bool = false
 var _damage_event_counter: int = 0
 
 const OBJECTIVES: Array[String] = [
@@ -51,11 +52,23 @@ const OBJECTIVES: Array[String] = [
 	"Plant, water, and harvest a Field Tuber crop.",
 	"Trade with Grower Nia and stabilize the food-water loop.",
 	"MVP LOOP COMPLETE — three regions now support a connected survival economy.",
+	"Cross the northern pass and survey the Iron Mountains.",
+	"Rebuild the mine lift with structural steel and precision components.",
+	"Recover pressure-grade alloy from the high mine.",
+	"Reach Frostline and establish a heated shelter.",
+	"Bring the steam engine online and stabilize its pressure.",
+	"Restore electrical generation and the regional purification network.",
+	"Descend into The Deep and recover the dormant relay core.",
+	"Repair the Deep Rail to reconnect all regional logistics.",
+	"Carry the relay core to the Veil Nexus and assemble the gateway interface.",
+	"Choose the future of The Veil: Restore, Destroy, or Rewrite.",
+	"IRONVEIL COMPLETE — the world now carries the consequence of your understanding.",
 ]
 
 func _ready() -> void:
 	TickManager.farming_tick.connect(_on_survival_tick)
 	TickManager.machine_tick.connect(_on_machine_tick)
+	NetworkManager.shared_object_received.connect(_on_remote_world_object)
 	new_game()
 
 func new_game() -> void:
@@ -82,6 +95,7 @@ func new_game() -> void:
 	ambient_temperature = 18.0
 	_damage_event_counter = 0
 	mechanical_network.clear()
+	InfrastructureNetwork.clear()
 	clear_boss()
 	_emit_all()
 
@@ -165,6 +179,11 @@ func add_item(item_id: String, quantity: int = 1) -> void:
 		advance_objective(17)
 	if item_id == "field_tuber" and objective_step == 19:
 		advance_objective(20)
+	if item_id == "pressure_alloy" and objective_step == 23:
+		advance_objective(24)
+	if item_id == "relay_core" and objective_step == 28:
+		set_flag("deep_relay_recovered", true)
+		advance_objective(29)
 
 func remove_item(item_id: String, quantity: int = 1) -> bool:
 	if quantity <= 0:
@@ -295,7 +314,10 @@ func set_flag(flag: String, value: Variant = true) -> void:
 	var shared_flags: Array[String] = [
 		"bridge_repaired", "mara_spoken", "foundry_gate_open",
 		"thermal_valve_a", "thermal_valve_b", "ashlands_wind_online",
-		"basin_irrigation_online", "phase3_mvp_complete"
+		"basin_irrigation_online", "phase3_mvp_complete", "mine_lift_online",
+		"frostline_shelter_online", "steam_engine_online", "regional_generator_online",
+		"regional_purifier_online", "deep_relay_recovered", "deep_rail_online",
+		"veil_gateway_online", "veil_ending", "game_complete"
 	]
 	if shared_flags.has(flag) and not _applying_remote_flag and NetworkManager.is_online() and not NetworkManager.is_server_mode():
 		NetworkManager.submit_shared_flag(flag, value)
@@ -311,6 +333,13 @@ func get_flag(flag: String, fallback: Variant = false) -> Variant:
 
 func set_world_object(object_id: String, state: Dictionary) -> void:
 	world_objects[object_id] = state.duplicate(true)
+	if not _applying_remote_world_object and NetworkManager.is_online() and not NetworkManager.is_server_mode():
+		NetworkManager.submit_world_object(object_id, state)
+
+func _on_remote_world_object(object_id: String, state: Dictionary) -> void:
+	_applying_remote_world_object = true
+	world_objects[object_id] = state.duplicate(true)
+	_applying_remote_world_object = false
 
 func get_world_object(object_id: String) -> Dictionary:
 	var value: Variant = world_objects.get(object_id, {})
@@ -337,6 +366,7 @@ func snapshot() -> Dictionary:
 		"current_region_id": current_region_id,
 		"ambient_temperature": ambient_temperature,
 		"mechanical_network": mechanical_network.to_dict(),
+		"infrastructure_network": InfrastructureNetwork.snapshot(),
 	}
 
 func restore(data: Dictionary) -> void:
@@ -367,6 +397,9 @@ func restore(data: Dictionary) -> void:
 	var network_value: Variant = data.get("mechanical_network", {})
 	if network_value is Dictionary:
 		mechanical_network.from_dict(network_value as Dictionary)
+	var infrastructure_value: Variant = data.get("infrastructure_network", {})
+	if infrastructure_value is Dictionary:
+		InfrastructureNetwork.restore(infrastructure_value as Dictionary)
 	_emit_all()
 
 func _emit_all() -> void:

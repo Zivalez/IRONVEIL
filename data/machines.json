@@ -104,5 +104,11 @@
     "min_torque": 20.0,
     "efficiency": 0.9,
     "description": "Powered fixture for industrial precision assembly."
-  }
+  },
+  {"id":"mine_lift","name":"Counterweight Mine Lift","kind":"logistics","min_rpm":38.0,"min_torque":46.0,"efficiency":0.82,"description":"A load-rated mountain lift driven through mechanical reduction."},
+  {"id":"steam_engine","name":"Compound Steam Engine","kind":"source","base_kw":24.0,"safe_pressure_kpa":680.0,"description":"Pressure vessel and flywheel convert controlled heat into regional power."},
+  {"id":"regional_generator","name":"Regional Generator","kind":"electrical_source","base_kw":22.0,"description":"A field-wound generator coupling steam rotation to the first stable grid."},
+  {"id":"regional_purifier","name":"Regional Purifier","kind":"electrical_consumer","load_kw":8.0,"description":"Filters air and water contamination across connected settlements."},
+  {"id":"deep_rail","name":"Deep Rail Exchange","kind":"logistics","load_kw":6.0,"description":"Restored freight line joining six regional production chains."},
+  {"id":"veil_gateway","name":"Veil Gateway Interface","kind":"veil","load_kw":12.0,"description":"A federated interface capable of restoring, destroying, or rewriting The Veil."}
 ]

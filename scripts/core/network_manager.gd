@@ -8,6 +8,8 @@ signal remote_player_left(peer_id: int)
 signal shared_flag_received(flag: String, value: Variant)
 signal room_roster_updated(players: Dictionary)
 signal boss_authority_state(health: float, max_health: float, vulnerable: bool)
+signal shared_object_received(object_id: String, state: Dictionary)
+signal shared_container_received(container_id: String, contents: Dictionary, transaction_id: String)
 
 const MAX_PLAYERS_PER_ROOM := 4
 const DEFAULT_ROOM_PORT := 9081
@@ -39,6 +41,9 @@ var _room_shared_flags: Dictionary = {}
 var _room_boss_health: Dictionary = {}
 var _room_boss_vulnerability_expires_unix: Dictionary = {}
 var _client_boss_state: Dictionary = {}
+var _room_world_objects: Dictionary = {}
+var _room_containers: Dictionary = {}
+var _processed_transactions: Dictionary = {}
 
 var _list_request: HTTPRequest
 var _create_request: HTTPRequest
@@ -132,10 +137,14 @@ func create_room(room_name: String, password: String = "", is_public: bool = tru
 		"password": password,
 		"public": is_public,
 		"player_name": _display_name(),
+		"world_id": AccountManager.active_world_id,
 	}
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	if AccountManager.is_authenticated():
+		headers.append("Authorization: Bearer %s" % AccountManager.session_token)
 	var error: Error = _create_request.request(
 		_lobby_url("/rooms"),
-		PackedStringArray(["Content-Type: application/json"]),
+		headers,
 		HTTPClient.METHOD_POST,
 		JSON.stringify(body)
 	)
@@ -147,9 +156,12 @@ func join_room(room_id: String, password: String = "") -> void:
 		"password": password,
 		"player_name": _display_name(),
 	}
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	if AccountManager.is_authenticated():
+		headers.append("Authorization: Bearer %s" % AccountManager.session_token)
 	var error: Error = _join_request.request(
 		_lobby_url("/rooms/%s/join" % room_id.uri_encode()),
-		PackedStringArray(["Content-Type: application/json"]),
+		headers,
 		HTTPClient.METHOD_POST,
 		JSON.stringify(body)
 	)
@@ -189,6 +201,21 @@ func submit_shared_flag(flag: String, value: Variant) -> void:
 	if not is_online() or _server_mode:
 		return
 	_request_shared_flag.rpc_id(1, flag, value)
+
+func submit_world_object(object_id: String, state: Dictionary) -> void:
+	if not is_online() or _server_mode:
+		return
+	_request_world_object.rpc_id(1, object_id, state)
+
+func bootstrap_shared_world(flags: Dictionary, objects: Dictionary) -> void:
+	if not is_online() or _server_mode:
+		return
+	_request_world_bootstrap.rpc_id(1, flags, objects)
+
+func submit_container_transfer(container_id: String, item_id: String, quantity_delta: int, transaction_id: String) -> void:
+	if not is_online() or _server_mode:
+		return
+	_request_container_transfer.rpc_id(1, container_id, item_id, quantity_delta, transaction_id)
 
 func submit_boss_damage(amount: float) -> void:
 	if not is_online() or _server_mode:
@@ -337,6 +364,12 @@ func _on_peer_connected(peer_id: int) -> void:
 		var shared: Dictionary = _room_shared_flags.get(room_id, {})
 		for flag_variant in shared:
 			_receive_shared_flag.rpc_id(peer_id, str(flag_variant), shared[flag_variant])
+		var objects: Dictionary = _room_world_objects.get(room_id, {})
+		for object_variant in objects:
+			_receive_world_object.rpc_id(peer_id, str(object_variant), objects[object_variant])
+		var containers: Dictionary = _room_containers.get(room_id, {})
+		for container_variant in containers:
+			_receive_container.rpc_id(peer_id, str(container_variant), containers[container_variant], "sync")
 		_send_boss_state_to_peer(room_id, peer_id)
 	else:
 		# Client receives peer notifications from the server relay only when enabled.
@@ -354,7 +387,6 @@ func _on_peer_disconnected(peer_id: int) -> void:
 			room.erase(peer_id)
 			if room.is_empty():
 				_room_players.erase(room_id)
-				_room_shared_flags.erase(room_id)
 			else:
 				_room_players[room_id] = room
 				_broadcast_roster(room_id)
@@ -425,9 +457,17 @@ func _request_shared_flag(flag: String, value: Variant) -> void:
 	var allowed_client_flags: Array[String] = [
 		"bridge_repaired", "mara_spoken", "foundry_gate_open",
 		"thermal_valve_a", "thermal_valve_b",
-		"ashlands_wind_online", "basin_irrigation_online", "phase3_mvp_complete"
+		"ashlands_wind_online", "basin_irrigation_online", "phase3_mvp_complete",
+		"mine_lift_online", "frostline_shelter_online", "steam_engine_online",
+		"regional_generator_online", "regional_purifier_online", "deep_relay_recovered",
+		"deep_rail_online", "veil_gateway_online", "veil_ending", "game_complete"
 	]
-	if not allowed_client_flags.has(flag) or not bool(value):
+	if not allowed_client_flags.has(flag):
+		return
+	if flag == "veil_ending":
+		if str(value) not in ["restore", "destroy", "rewrite"]:
+			return
+	elif not bool(value):
 		return
 	var state: Dictionary = _room_shared_flags.get(room_id, {})
 	# Validate that the player is physically near the world interaction they are
@@ -442,6 +482,16 @@ func _request_shared_flag(flag: String, value: Variant) -> void:
 		"ashlands_wind_online": Vector3(108.0, 0.0, -5.0),
 		"basin_irrigation_online": Vector3(148.0, 0.0, -3.0),
 		"phase3_mvp_complete": Vector3(164.0, 0.0, 7.0),
+		"mine_lift_online": Vector3(212.0, 0.0, -4.0),
+		"frostline_shelter_online": Vector3(252.0, 0.0, 5.0),
+		"steam_engine_online": Vector3(261.0, 0.0, -4.0),
+		"regional_generator_online": Vector3(268.0, 0.0, -4.0),
+		"regional_purifier_online": Vector3(272.0, 0.0, 6.0),
+		"deep_relay_recovered": Vector3(317.0, 0.0, -9.0),
+		"deep_rail_online": Vector3(313.0, 0.0, 3.0),
+		"veil_gateway_online": Vector3(348.0, 0.0, 0.0),
+		"veil_ending": Vector3(360.0, 0.0, 0.0),
+		"game_complete": Vector3(360.0, 0.0, 0.0),
 	}
 	var interaction_position_value: Variant = required_position.get(flag, null)
 	if interaction_position_value is Vector3 and not _peer_is_near(sender_id, interaction_position_value as Vector3, 5.5):
@@ -459,7 +509,23 @@ func _request_shared_flag(flag: String, value: Variant) -> void:
 		return
 	if flag == "phase3_mvp_complete" and not bool(state.get("basin_irrigation_online", false)):
 		return
-	_set_room_shared_flag(room_id, flag, true)
+	if flag == "mine_lift_online" and not bool(state.get("phase3_mvp_complete", false)):
+		return
+	if flag == "steam_engine_online" and not bool(state.get("mine_lift_online", false)):
+		return
+	if flag == "regional_generator_online" and not bool(state.get("steam_engine_online", false)):
+		return
+	if flag == "regional_purifier_online" and not bool(state.get("regional_generator_online", false)):
+		return
+	if flag == "deep_rail_online" and not bool(state.get("deep_relay_recovered", false)):
+		return
+	if flag == "veil_gateway_online" and not bool(state.get("deep_rail_online", false)):
+		return
+	if flag == "veil_ending" and not bool(state.get("veil_gateway_online", false)):
+		return
+	if flag == "game_complete" and str(state.get("veil_ending", "")).is_empty():
+		return
+	_set_room_shared_flag(room_id, flag, value)
 	state = _room_shared_flags.get(room_id, {})
 	if bool(state.get("thermal_valve_a", false)) and bool(state.get("thermal_valve_b", false)) and not bool(state.get("boss_vulnerable", false)):
 		_set_room_shared_flag(room_id, "boss_vulnerable", true)
@@ -471,6 +537,98 @@ func _receive_shared_flag(flag: String, value: Variant) -> void:
 	if _server_mode:
 		return
 	shared_flag_received.emit(flag, value)
+
+@rpc("any_peer", "call_remote", "reliable", 7)
+func _request_world_bootstrap(flags: Dictionary, objects: Dictionary) -> void:
+	if not _server_mode or not multiplayer.is_server():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var room_id: String = str(_peer_rooms.get(sender_id, ""))
+	if room_id.is_empty() or not (_room_shared_flags.get(room_id, {}) as Dictionary).is_empty():
+		return
+	var allowed: Array[String] = [
+		"bridge_repaired", "mara_spoken", "foundry_gate_open", "thermal_valve_a", "thermal_valve_b",
+		"furnace_saint_defeated", "ashlands_wind_online", "basin_irrigation_online", "phase3_mvp_complete",
+		"mine_lift_online", "frostline_shelter_online", "steam_engine_online", "regional_generator_online",
+		"regional_purifier_online", "deep_relay_recovered", "deep_rail_online", "veil_gateway_online",
+		"veil_ending", "game_complete"
+	]
+	var clean_flags: Dictionary = {}
+	for flag_value in flags:
+		var flag: String = str(flag_value)
+		if allowed.has(flag):
+			clean_flags[flag] = flags[flag_value]
+	_room_shared_flags[room_id] = clean_flags
+	var clean_objects: Dictionary = {}
+	for object_value in objects:
+		var object_id: String = str(object_value)
+		if object_id.begins_with("basin_plot_") and objects[object_value] is Dictionary:
+			clean_objects[object_id] = (objects[object_value] as Dictionary).duplicate(true)
+	_room_world_objects[room_id] = clean_objects
+	for flag_value in clean_flags:
+		_set_room_shared_flag(room_id, str(flag_value), clean_flags[flag_value])
+	for object_value in clean_objects:
+		for peer_value in (_room_players.get(room_id, {}) as Dictionary).keys():
+			_receive_world_object.rpc_id(int(peer_value), str(object_value), clean_objects[object_value])
+	_log_event("world_bootstrapped", {"room_id": room_id, "flags": clean_flags.size(), "objects": clean_objects.size()})
+
+@rpc("any_peer", "call_remote", "reliable", 5)
+func _request_world_object(object_id: String, requested_state: Dictionary) -> void:
+	if not _server_mode or not multiplayer.is_server():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var room_id: String = str(_peer_rooms.get(sender_id, ""))
+	if room_id.is_empty() or object_id.length() > 64 or not object_id.begins_with("basin_plot_"):
+		return
+	var clean := {
+		"crop_id": str(requested_state.get("crop_id", "")).substr(0, 32),
+		"growth": clampf(float(requested_state.get("growth", 0.0)), 0.0, 1.0),
+		"water": clampf(float(requested_state.get("water", 0.0)), 0.0, 100.0),
+		"fertility": clampf(float(requested_state.get("fertility", 0.0)), 0.0, 100.0),
+		"pests": clampf(float(requested_state.get("pests", 0.0)), 0.0, 100.0),
+	}
+	var objects: Dictionary = _room_world_objects.get(room_id, {})
+	objects[object_id] = clean
+	_room_world_objects[room_id] = objects
+	for peer_variant in (_room_players.get(room_id, {}) as Dictionary).keys():
+		_receive_world_object.rpc_id(int(peer_variant), object_id, clean)
+
+@rpc("authority", "call_remote", "reliable", 5)
+func _receive_world_object(object_id: String, state: Dictionary) -> void:
+	if not _server_mode:
+		shared_object_received.emit(object_id, state.duplicate(true))
+
+@rpc("any_peer", "call_remote", "reliable", 6)
+func _request_container_transfer(container_id: String, item_id: String, quantity_delta: int, transaction_id: String) -> void:
+	if not _server_mode or not multiplayer.is_server():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var room_id: String = str(_peer_rooms.get(sender_id, ""))
+	if room_id.is_empty() or container_id.length() > 48 or item_id.length() > 48 or transaction_id.length() > 64:
+		return
+	var room_transactions: Dictionary = _processed_transactions.get(room_id, {})
+	if room_transactions.has(transaction_id):
+		return
+	room_transactions[transaction_id] = int(Time.get_unix_time_from_system())
+	_processed_transactions[room_id] = room_transactions
+	var room_containers: Dictionary = _room_containers.get(room_id, {})
+	var contents: Dictionary = room_containers.get(container_id, {})
+	var next_quantity: int = clampi(int(contents.get(item_id, 0)) + clampi(quantity_delta, -99, 99), 0, 999)
+	if quantity_delta < 0 and int(contents.get(item_id, 0)) < -quantity_delta:
+		return
+	if next_quantity == 0:
+		contents.erase(item_id)
+	else:
+		contents[item_id] = next_quantity
+	room_containers[container_id] = contents
+	_room_containers[room_id] = room_containers
+	for peer_variant in (_room_players.get(room_id, {}) as Dictionary).keys():
+		_receive_container.rpc_id(int(peer_variant), container_id, contents, transaction_id)
+
+@rpc("authority", "call_remote", "reliable", 6)
+func _receive_container(container_id: String, contents: Dictionary, transaction_id: String) -> void:
+	if not _server_mode:
+		shared_container_received.emit(container_id, contents.duplicate(true), transaction_id)
 
 @rpc("any_peer", "call_remote", "reliable", 4)
 func _request_boss_damage(amount: float) -> void:
@@ -556,6 +714,8 @@ func room_server_snapshot() -> Dictionary:
 		"shared_flags": _room_shared_flags.duplicate(true),
 		"boss_health": _room_boss_health.duplicate(true),
 		"boss_vulnerability_expires_unix": _room_boss_vulnerability_expires_unix.duplicate(true),
+		"world_objects": _room_world_objects.duplicate(true),
+		"containers": _room_containers.duplicate(true),
 	}
 
 func restore_room_server_snapshot(snapshot: Dictionary) -> void:
@@ -570,6 +730,12 @@ func restore_room_server_snapshot(snapshot: Dictionary) -> void:
 	var boss_expiry_value: Variant = snapshot.get("boss_vulnerability_expires_unix", {})
 	if boss_expiry_value is Dictionary:
 		_room_boss_vulnerability_expires_unix = (boss_expiry_value as Dictionary).duplicate(true)
+	var objects_value: Variant = snapshot.get("world_objects", {})
+	if objects_value is Dictionary:
+		_room_world_objects = (objects_value as Dictionary).duplicate(true)
+	var containers_value: Variant = snapshot.get("containers", {})
+	if containers_value is Dictionary:
+		_room_containers = (containers_value as Dictionary).duplicate(true)
 
 func _log_event(event_name: String, data: Dictionary = {}) -> void:
 	var record := {

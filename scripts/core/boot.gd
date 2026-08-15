@@ -1,12 +1,28 @@
 extends Node
 
+const TitleScreenScript = preload("res://scripts/ui/title_screen.gd")
+
 var _overlay: CanvasLayer
 var _status_label: Label
 var _detail_label: Label
 
 func _ready() -> void:
 	_build_boot_overlay()
-	call_deferred("_start_gameplay")
+	if DisplayServer.get_name() == "headless":
+		call_deferred("_start_gameplay")
+	else:
+		call_deferred("_show_title_screen")
+
+func _show_title_screen() -> void:
+	_overlay.queue_free()
+	var title_screen: CanvasLayer = TitleScreenScript.new()
+	add_child(title_screen)
+	title_screen.start_requested.connect(_on_title_start_requested.bind(title_screen))
+
+func _on_title_start_requested(title_screen: CanvasLayer) -> void:
+	title_screen.queue_free()
+	_build_boot_overlay()
+	_start_gameplay()
 
 func _build_boot_overlay() -> void:
 	_overlay = CanvasLayer.new()

@@ -143,5 +143,18 @@
     "category": "medical",
     "max_stack": 8,
     "description": "A field antiseptic that reduces wound infection risk."
-  }
+  },
+  {"id":"stone","name":"Structural Stone","category":"material","max_stack":30,"description":"Dense mountain stone suitable for foundations."},
+  {"id":"pressure_alloy","name":"Pressure Alloy","category":"industrial","max_stack":12,"description":"A nickel-rich alloy that survives steam pressure cycles."},
+  {"id":"pressure_vessel","name":"Pressure Vessel","category":"industrial","max_stack":4,"description":"Riveted vessel certified for controlled steam."},
+  {"id":"insulation_fiber","name":"Insulation Fiber","category":"material","max_stack":20,"description":"Frostline fiber that retains heat without igniting."},
+  {"id":"ice_core","name":"Ice Core","category":"component","max_stack":8,"description":"Stable cold reservoir used in thermal regulation."},
+  {"id":"copper_coil","name":"Copper Coil","category":"electrical","max_stack":12,"description":"Insulated winding for motors, relays, and generators."},
+  {"id":"relay","name":"Industrial Relay","category":"electrical","max_stack":12,"description":"A rugged electrically controlled switch."},
+  {"id":"rail_segment","name":"Rail Segment","category":"logistics","max_stack":20,"description":"Aligned steel rail for regional freight routes."},
+  {"id":"deep_ore","name":"Deep Ore","category":"material","max_stack":16,"description":"Conductive mineral from below the old mine line."},
+  {"id":"ancient_circuit","name":"Ancient Circuit","category":"veil","max_stack":8,"description":"An intact logic lattice from the pre-collapse network."},
+  {"id":"veil_crystal","name":"Veil Crystal","category":"veil","max_stack":8,"description":"A crystalline interface that responds to infrastructure signals."},
+  {"id":"relay_core","name":"Veil Relay Core","category":"veil","max_stack":1,"description":"The dormant heart of a regional Veil relay."},
+  {"id":"gateway_interface","name":"Gateway Interface","category":"veil","max_stack":1,"description":"A federated control interface assembled from every technology tier."}
 ]

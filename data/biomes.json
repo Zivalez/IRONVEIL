@@ -49,6 +49,38 @@
     ]
   },
   {
+    "id": "iron_mountains",
+    "name": "Iron Mountains",
+    "region": true,
+    "ambient_temperature": 7.0,
+    "hazards": ["rockfall", "vertical_traversal", "ore_mites"],
+    "resources": ["iron_ore", "pressure_alloy", "stone"]
+  },
+  {
+    "id": "frostline",
+    "name": "Frostline Plateau",
+    "region": true,
+    "ambient_temperature": -14.0,
+    "hazards": ["extreme_cold", "whiteout", "frost_wraith"],
+    "resources": ["ice_core", "insulation_fiber", "charcoal"]
+  },
+  {
+    "id": "the_deep",
+    "name": "The Deep",
+    "region": true,
+    "ambient_temperature": 11.0,
+    "hazards": ["darkness", "toxic_spores", "deep_crawler"],
+    "resources": ["veil_crystal", "ancient_circuit", "deep_ore"]
+  },
+  {
+    "id": "veil_nexus",
+    "name": "Veil Nexus",
+    "region": true,
+    "ambient_temperature": 19.0,
+    "hazards": ["energy_surge", "veil_echo"],
+    "resources": ["veil_crystal"]
+  },
+  {
     "id": "ashwick_town",
     "name": "Ashwick",
     "region": false,

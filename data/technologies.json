@@ -33,5 +33,9 @@
       "irrigation_pump",
       "industrial_crafting"
     ]
-  }
+  },
+  {"id":"steam","name":"Steam","requires":["industrial"],"unlocks":["pressure_vessel","steam_engine","thermal_network"]},
+  {"id":"electrical","name":"Electrical","requires":["steam"],"unlocks":["generator","motor","relay","regional_grid"]},
+  {"id":"logistics","name":"Regional Logistics","requires":["electrical"],"unlocks":["rail","freight_routing","deep_lift"]},
+  {"id":"veil","name":"Veil Technology","requires":["logistics"],"unlocks":["gateway_interface","veil_relay","ending_choice"]}
 ]

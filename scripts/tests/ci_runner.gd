@@ -8,8 +8,10 @@ extends Node
 const SCRIPT_PATHS: Array[String] = [
 	"res://scripts/core/mechanical_network.gd",
 	"res://scripts/core/tick_manager.gd",
+	"res://scripts/core/infrastructure_network.gd",
 	"res://scripts/data/data_registry.gd",
 	"res://scripts/core/settings_manager.gd",
+	"res://scripts/core/account_manager.gd",
 	"res://scripts/core/network_manager.gd",
 	"res://scripts/core/game_state.gd",
 	"res://scripts/core/save_manager.gd",
@@ -40,12 +42,16 @@ const SCRIPT_PATHS: Array[String] = [
 	"res://scripts/game/industrial_hammer.gd",
 	"res://scripts/game/industrial_station.gd",
 	"res://scripts/game/irrigation_pump.gd",
+	"res://scripts/game/engineering_node.gd",
+	"res://scripts/game/late_fabricator.gd",
+	"res://scripts/game/veil_terminal.gd",
 	"res://scripts/game/dungeon_gate.gd",
 	"res://scripts/game/thermal_valve.gd",
 	"res://scripts/game/boss_furnace_saint.gd",
 	"res://scripts/game/main.gd",
 	"res://scripts/server/room_server.gd",
 	"res://scripts/ui/hud.gd",
+	"res://scripts/ui/title_screen.gd",
 ]
 const SCENE_PATHS: Array[String] = [
 	"res://scenes/boot.tscn",
@@ -56,8 +62,10 @@ const SCENE_PATHS: Array[String] = [
 const REQUIRED_AUTOLOADS: Array[String] = [
 	"DataRegistry",
 	"TickManager",
+	"InfrastructureNetwork",
 	"ChunkManager",
 	"SettingsManager",
+	"AccountManager",
 	"NetworkManager",
 	"GameState",
 	"SaveManager",

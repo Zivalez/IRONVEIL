@@ -39,5 +39,8 @@
       "irrigation_pipe": 2
     },
     "dialogue": "Water is not the problem. Dirty water is. Fix the header and I can make the basin feed people again."
-  }
+  },
+  {"id":"torren","name":"Liftwright Torren","specialization":"structural engineering","need":"rail stock","offer":{"pressure_alloy":2,"stone":4},"cost":{"steel_beam":1},"dialogue":"The mountain does not forgive weak joints. Show me steel that carries a real load."},
+  {"id":"sela","name":"Thermist Sela","specialization":"steam and climate","need":"insulated shelter","offer":{"insulation_fiber":4,"ice_core":1},"cost":{"pressure_vessel":1},"dialogue":"Heat is a circuit. Contain it, move it, and Frostline becomes survivable."},
+  {"id":"orum","name":"Deepkeeper Orum","specialization":"Veil studies","need":"restored rail access","offer":{"ancient_circuit":2,"veil_crystal":2},"cost":{"rail_segment":2},"dialogue":"The relay below is not magic. It is a machine whose language we forgot."}
 ]

@@ -28,26 +28,49 @@ const WindmillSourceScript = preload("res://scripts/game/windmill_source.gd")
 const IndustrialHammerScript = preload("res://scripts/game/industrial_hammer.gd")
 const IndustrialStationScript = preload("res://scripts/game/industrial_station.gd")
 const IrrigationPumpScript = preload("res://scripts/game/irrigation_pump.gd")
+const EngineeringNodeScript = preload("res://scripts/game/engineering_node.gd")
+const LateFabricatorScript = preload("res://scripts/game/late_fabricator.gd")
+const VeilTerminalScript = preload("res://scripts/game/veil_terminal.gd")
 
 var player: CharacterBody3D
 var camera_rig: Node3D
 var hud: CanvasLayer
 var remote_players: Dictionary = {}
+var _autosave_timer: Timer
 
 func _ready() -> void:
 	GameState.new_game()
 	_build_environment()
 	_build_vertical_slice_world()
 	_build_phase3_regions()
+	_build_phase4_regions()
 	_spawn_player()
 	_spawn_ui()
 	_spawn_post_processing()
 	_bind_network_visuals()
+	_start_autosave()
+	if str(AccountManager.active_world.get("kind", "personal")) == "shared":
+		NetworkManager.create_room(str(AccountManager.active_world.get("name", "Shared World")), "", false)
+	var server_snapshot: Dictionary = AccountManager.consume_pending_snapshot()
+	if not server_snapshot.is_empty():
+		SaveManager.apply_snapshot(server_snapshot, player)
+		GameState.notify("Persistent world checkpoint restored.", "success")
 	GameState.add_journal(
 		"Field Condition",
 		"Observation",
 		"You wake beside a cold camp on the Green Hollow road. An abandoned workshop, Ashwick, and a sealed Foundry lie along the old industrial route."
 	)
+
+func _start_autosave() -> void:
+	_autosave_timer = Timer.new()
+	_autosave_timer.wait_time = 120.0
+	_autosave_timer.autostart = true
+	_autosave_timer.timeout.connect(_on_autosave)
+	add_child(_autosave_timer)
+
+func _on_autosave() -> void:
+	if player != null and is_instance_valid(player):
+		SaveManager.save_game(player)
 
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
@@ -298,6 +321,127 @@ func _build_flooded_basin_region() -> void:
 	_spawn_enemy("hollow_vermin", Vector3(160.0,0.7,-1.0))
 	_spawn_enemy("hollow_vermin", Vector3(172.0,0.7,10.0))
 
+func _build_phase4_regions() -> void:
+	_build_late_region_zones()
+	_build_iron_mountains()
+	_build_frostline()
+	_build_the_deep()
+	_build_veil_nexus()
+
+func _build_late_region_zones() -> void:
+	for zone_data in [
+		["iron_mountains", Vector3(210.0, 0.0, 0.0), Vector3(48.0, 8.0, 40.0)],
+		["frostline", Vector3(258.0, 0.0, 0.0), Vector3(48.0, 8.0, 40.0)],
+		["the_deep", Vector3(306.0, 0.0, 0.0), Vector3(48.0, 8.0, 40.0)],
+		["veil_nexus", Vector3(352.0, 0.0, 0.0), Vector3(44.0, 8.0, 38.0)],
+	]:
+		var zone: Area3D = RegionZoneScript.new()
+		var zone_size: Vector3 = zone_data[2]
+		var zone_position: Vector3 = zone_data[1]
+		zone.configure(str(zone_data[0]), zone_size)
+		zone.position = zone_position
+		add_child(zone)
+
+func _build_iron_mountains() -> void:
+	_create_static_textured("IronMountainGround", Vector3(210.0,-0.24,0.0), Vector3(48.0,0.48,38.0), "res://assets/pixel/stone_wall.png", Color(0.43,0.45,0.42),0.32,0.82)
+	var label: Label3D = VisualFactory.make_label("REGION IV // IRON MOUNTAINS", Color(0.78,0.75,0.62))
+	label.position = Vector3(201.0,5.0,-13.0)
+	add_child(label)
+	for i in range(11):
+		var height_value: float = 2.4 + float(i % 4) * 1.2
+		_create_static_textured("MountainSpire%d" % i, Vector3(190.0 + float(i * 4),height_value * 0.5,-14.0 + float((i * 9) % 28)),Vector3(2.6,height_value,2.6),"res://assets/pixel/stone_wall.png",Color(0.45,0.46,0.43),0.28,0.90)
+	var torren: Node3D = SettlementNPCScript.new()
+	torren.configure("torren")
+	torren.position = Vector3(198.0,0.0,6.0)
+	add_child(torren)
+	_spawn_engineering_node({"id":"mine_lift","name":"Counterweight Mine Lift","requirements":{"steel_beam":2,"precision_component":1},"rewards":{"pressure_alloy":2},"flag":"mine_lift_online","objective_from":22,"objective_to":23,"technology":"mechanical"},Vector3(212.0,0.0,-4.0))
+	var fabricator: Node3D = LateFabricatorScript.new()
+	fabricator.position = Vector3(204.0,0.0,7.0)
+	add_child(fabricator)
+	_spawn_pickup("pressure_alloy",2,Vector3(220.0,0.0,-8.0))
+	_spawn_pickup("stone",6,Vector3(218.0,0.0,8.0))
+	_spawn_pickup("iron_ore",6,Vector3(226.0,0.0,3.0))
+	_spawn_enemy("ore_mite",Vector3(215.0,0.7,9.0))
+	_spawn_enemy("ore_mite",Vector3(226.0,0.7,-7.0))
+
+func _build_frostline() -> void:
+	_create_static_textured("FrostlineGround",Vector3(258.0,-0.24,0.0),Vector3(48.0,0.48,38.0),"res://assets/pixel/stone_wall.png",Color(0.60,0.72,0.73),0.08,0.76)
+	var label: Label3D = VisualFactory.make_label("REGION V // FROSTLINE",Color(0.68,0.91,0.94))
+	label.position=Vector3(250.0,5.0,-13.0)
+	add_child(label)
+	for i in range(13):
+		var shard := VisualFactory.make_box_mesh(Vector3(0.6,2.0 + float(i%3),0.6),"res://assets/pixel/water.png",Color(0.58,0.88,0.94),0.08,0.18)
+		shard.position=Vector3(238.0 + float((i*7)%39),1.0,-13.0 + float((i*11)%27))
+		shard.rotation_degrees.z=12.0 + float(i%4)*7.0
+		add_child(shard)
+	var sela: Node3D=SettlementNPCScript.new()
+	sela.configure("sela")
+	sela.position=Vector3(246.0,0.0,6.0)
+	add_child(sela)
+	_spawn_engineering_node({"id":"frostline_shelter","name":"Frostline Thermal Shelter","requirements":{"steel_beam":1,"insulation_fiber":2},"flag":"frostline_shelter_online","objective_from":25,"objective_to":26,"technology":"steam"},Vector3(252.0,0.0,5.0))
+	_spawn_engineering_node({"id":"steam_engine","name":"Compound Steam Engine","requirements":{"pressure_vessel":1,"charcoal":3},"flag":"steam_engine_online","objective_from":26,"objective_to":27,"technology":"steam"},Vector3(261.0,0.0,-4.0))
+	_spawn_engineering_node({"id":"regional_generator","name":"Regional Generator","requirements":{"copper_coil":2,"precision_component":1},"flag":"regional_generator_online","technology":"electrical","prerequisite_flag":"steam_engine_online","electrical_output_kw":22.0},Vector3(268.0,0.0,-4.0))
+	_spawn_engineering_node({"id":"regional_purifier","name":"Climate Purification Array","requirements":{"filter_cartridge":2,"relay":1},"flag":"regional_purifier_online","objective_from":27,"objective_to":28,"technology":"electrical","prerequisite_flag":"regional_generator_online","electrical_load_kw":8.0},Vector3(272.0,0.0,6.0))
+	var frost_fabricator: Node3D=LateFabricatorScript.new()
+	frost_fabricator.position=Vector3(255.0,0.0,7.0)
+	add_child(frost_fabricator)
+	_spawn_pickup("insulation_fiber",5,Vector3(244.0,0.0,-7.0))
+	_spawn_pickup("ice_core",2,Vector3(273.0,0.0,-10.0))
+	_spawn_pickup("deep_ore",2,Vector3(266.0,0.0,10.0))
+	_spawn_pickup("charcoal",4,Vector3(241.0,0.0,10.0))
+	_spawn_enemy("frost_wraith",Vector3(258.0,0.7,10.0))
+	_spawn_enemy("frost_wraith",Vector3(276.0,0.7,-8.0))
+
+func _build_the_deep() -> void:
+	_create_static_textured("DeepGround",Vector3(306.0,-0.24,0.0),Vector3(48.0,0.48,38.0),"res://assets/pixel/dungeon_floor.png",Color(0.24,0.27,0.27),0.38,0.72)
+	var label: Label3D=VisualFactory.make_label("REGION VI // THE DEEP",Color(0.59,0.76,0.70))
+	label.position=Vector3(298.0,4.5,-13.0)
+	add_child(label)
+	for i in range(9):
+		_create_static_textured("DeepColumn%d"%i,Vector3(288.0+float(i*5),2.2,-12.0+float((i*8)%24)),Vector3(1.7,4.4,1.7),"res://assets/pixel/dungeon_floor.png",Color(0.30,0.31,0.31),0.45,0.68)
+	var orum: Node3D=SettlementNPCScript.new()
+	orum.configure("orum")
+	orum.position=Vector3(296.0,0.0,7.0)
+	add_child(orum)
+	_spawn_engineering_node({"id":"deep_rail","name":"Deep Rail Exchange","requirements":{"rail_segment":4,"relay":1},"flag":"deep_rail_online","objective_from":29,"objective_to":30,"technology":"rail","prerequisite_flag":"regional_purifier_online","electrical_load_kw":6.0},Vector3(313.0,0.0,3.0))
+	_spawn_pickup("relay_core",1,Vector3(317.0,0.0,-9.0))
+	_spawn_pickup("ancient_circuit",2,Vector3(307.0,0.0,-7.0))
+	_spawn_pickup("veil_crystal",2,Vector3(321.0,0.0,8.0))
+	_spawn_pickup("deep_ore",4,Vector3(291.0,0.0,-5.0))
+	_spawn_enemy("deep_crawler",Vector3(305.0,0.7,9.0))
+	_spawn_enemy("deep_crawler",Vector3(320.0,0.7,-5.0))
+	var deep_fabricator: Node3D=LateFabricatorScript.new()
+	deep_fabricator.position=Vector3(299.0,0.0,-4.0)
+	add_child(deep_fabricator)
+
+func _build_veil_nexus() -> void:
+	_create_static_textured("VeilNexusGround",Vector3(352.0,-0.24,0.0),Vector3(44.0,0.48,36.0),"res://assets/pixel/dungeon_floor.png",Color(0.30,0.25,0.39),0.25,0.36)
+	var label: Label3D=VisualFactory.make_label("THE VEIL // NEXUS",Color(0.75,0.58,0.96))
+	label.position=Vector3(352.0,6.0,-12.0)
+	add_child(label)
+	for i in range(12):
+		var light:=OmniLight3D.new()
+		light.position=Vector3(334.0+float((i*7)%37),1.6,-12.0+float((i*13)%25))
+		light.light_color=Color(0.45,0.28,0.76)
+		light.light_energy=1.2
+		light.omni_range=5.5
+		add_child(light)
+	_spawn_engineering_node({"id":"veil_gateway","name":"Veil Gateway Interface","requirements":{"gateway_interface":1},"flag":"veil_gateway_online","objective_from":30,"objective_to":31,"technology":"veil","prerequisite_flag":"deep_rail_online","electrical_load_kw":12.0},Vector3(348.0,0.0,0.0))
+	for terminal_data in [["restore","RESTORE",Vector3(359.0,0.0,-7.0)],["destroy","DESTROY",Vector3(362.0,0.0,0.0)],["rewrite","REWRITE",Vector3(359.0,0.0,7.0)]]:
+		var terminal: Node3D=VeilTerminalScript.new()
+		terminal.configure(str(terminal_data[0]),str(terminal_data[1]))
+		var terminal_position: Vector3 = terminal_data[2]
+		terminal.position=terminal_position
+		add_child(terminal)
+	_spawn_enemy("veil_echo",Vector3(340.0,0.7,9.0))
+	_spawn_enemy("veil_echo",Vector3(368.0,0.7,-9.0))
+
+func _spawn_engineering_node(config: Dictionary, pos: Vector3) -> void:
+	var infrastructure: Node3D=EngineeringNodeScript.new()
+	infrastructure.configure(config)
+	infrastructure.position=pos
+	add_child(infrastructure)
+
 func _spawn_player() -> void:
 	player = PlayerScript.new()
 	player.name = "Player"
@@ -322,6 +466,11 @@ func _spawn_post_processing() -> void:
 func _bind_network_visuals() -> void:
 	NetworkManager.remote_player_state.connect(_on_remote_player_state)
 	NetworkManager.remote_player_left.connect(_on_remote_player_left)
+	NetworkManager.connection_state_changed.connect(_on_network_state_changed)
+
+func _on_network_state_changed(state: String, _message: String) -> void:
+	if state == "online" and str(AccountManager.active_world.get("kind", "personal")) == "shared":
+		NetworkManager.bootstrap_shared_world(GameState.flags, GameState.world_objects)
 
 func _on_remote_player_state(peer_id: int, display_name: String, position_value: Vector3, yaw: float) -> void:
 	var remote: Node3D = remote_players.get(peer_id, null) as Node3D

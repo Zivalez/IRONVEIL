@@ -13,6 +13,18 @@ var _gravity: float = 20.0
 var _network_accumulator: float = 0.0
 var _sprite: Sprite3D
 var _sprint_stamina_accumulator: float = 0.0
+var _animation_time: float = 0.0
+
+func _process(delta: float) -> void:
+	if _sprite == null:
+		return
+	_animation_time += delta
+	var moving: bool = Vector2(velocity.x, velocity.z).length() > 0.2
+	var reduced: bool = bool(SettingsManager.get_value("accessibility", "reduced_motion", false))
+	var bob: float = 0.0 if reduced or not moving else absf(sin(_animation_time * (13.0 if Input.is_action_pressed("sprint") else 9.0))) * 0.07
+	_sprite.position.y = 0.95 + bob
+	if absf(velocity.x) > 0.1:
+		_sprite.flip_h = velocity.x < 0.0
 
 func _ready() -> void:
 	add_to_group("players")
@@ -132,6 +144,10 @@ func _attack() -> void:
 		return
 	var arm_penalty: float = 1.25 if GameState.injuries.has("left_arm") or GameState.injuries.has("right_arm") else 1.0
 	attack_cooldown = 0.55 * arm_penalty
+	if _sprite != null and not bool(SettingsManager.get_value("accessibility", "reduced_motion", false)):
+		var tween: Tween = create_tween()
+		tween.tween_property(_sprite, "scale", Vector3(1.14, 0.88, 1.0), 0.08)
+		tween.tween_property(_sprite, "scale", Vector3.ONE, 0.14)
 	var closest: Node3D = null
 	var closest_distance: float = 2.2
 	for node_value in get_tree().get_nodes_in_group("enemy"):

@@ -8,8 +8,10 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 DataRegistry="*res://scripts/data/data_registry.gd"
 TickManager="*res://scripts/core/tick_manager.gd"
+InfrastructureNetwork="*res://scripts/core/infrastructure_network.gd"
 ChunkManager="*res://scripts/core/chunk_manager.gd"
 SettingsManager="*res://scripts/core/settings_manager.gd"
+AccountManager="*res://scripts/core/account_manager.gd"
 NetworkManager="*res://scripts/core/network_manager.gd"
 GameState="*res://scripts/core/game_state.gd"
 SaveManager="*res://scripts/core/save_manager.gd"

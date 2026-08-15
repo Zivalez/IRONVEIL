@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.0.0-source — Phase 4 full-route production candidate
+
+- Added product entry, account/session flow, personal/shared world selection, invites, and cross-browser continuation.
+- Added atomic server metadata, checksummed rolling world snapshots, local save migration/backups, and autosave.
+- Added stable membership-gated shared-world rooms, crop/world-object replication, transactional containers, and recoverable room checkpoints.
+- Added Iron Mountains, Frostline, The Deep, Veil Nexus, steam, electricity, purification, rail, late fabrication, and three Veil endings.
+- Added smooth follow/look-ahead camera, expanded field console, accessibility preferences, and player/enemy motion feedback.
+- Added Phase-4 static contract and persistence end-to-end tests.
+
 ## 2026-08-16 — Phase 2 Vertical Slice candidate
 
 - Expanded the First Playable into Green Hollow → Workshop → Ashwick → Foundry Vault → Furnace Saint.

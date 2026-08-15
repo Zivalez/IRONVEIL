@@ -7,6 +7,8 @@ var definition: Dictionary = {}
 var health: float = 1.0
 var attack_cooldown: float = 0.0
 var _gravity: float = 20.0
+var _sprite: Sprite3D
+var _animation_time: float = 0.0
 
 func configure(id_value: String) -> void:
 	enemy_id = id_value
@@ -20,10 +22,18 @@ func _ready() -> void:
 	TickManager.simulation_tick.connect(_on_simulation_tick)
 
 func _build_visual() -> void:
-	var path: String = "res://assets/pixel/hollow_stalker.png" if enemy_id == "hollow_stalker" else "res://assets/pixel/hollow_vermin.png"
-	var sprite: Sprite3D = VisualFactory.make_sprite(path, 0.04, true)
-	sprite.position.y = 0.75
-	add_child(sprite)
+	var path: String = "res://assets/pixel/hollow_stalker.png" if enemy_id in ["hollow_stalker", "frost_wraith", "veil_echo"] else "res://assets/pixel/hollow_vermin.png"
+	_sprite = VisualFactory.make_sprite(path, 0.04, true)
+	_sprite.position.y = 0.75
+	if enemy_id == "ore_mite":
+		_sprite.modulate = Color(0.78,0.58,0.34)
+	elif enemy_id == "frost_wraith":
+		_sprite.modulate = Color(0.58,0.88,0.94)
+	elif enemy_id == "deep_crawler":
+		_sprite.modulate = Color(0.48,0.62,0.50)
+	elif enemy_id == "veil_echo":
+		_sprite.modulate = Color(0.72,0.46,0.92)
+	add_child(_sprite)
 	var collision := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.34 if enemy_id == "hollow_vermin" else 0.43
@@ -33,6 +43,7 @@ func _build_visual() -> void:
 	add_child(collision)
 
 func _on_simulation_tick(delta: float) -> void:
+	_animation_time += delta
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
 	var players: Array[Node] = get_tree().get_nodes_in_group("player")
 	if players.is_empty() or not (players[0] is Node3D):
@@ -53,6 +64,10 @@ func _on_simulation_tick(delta: float) -> void:
 	else:
 		velocity.y = -0.1
 	move_and_slide()
+	if _sprite != null:
+		_sprite.position.y = 0.75 + (0.0 if bool(SettingsManager.get_value("accessibility", "reduced_motion", false)) else sin(_animation_time * 7.0) * 0.045)
+		if absf(velocity.x) > 0.1:
+			_sprite.flip_h = velocity.x < 0.0
 	if distance <= float(definition.get("attack_range", 1.3)) and attack_cooldown <= 0.0:
 		attack_cooldown = float(definition.get("attack_interval", 1.5))
 		if player.has_method("apply_damage"):
@@ -62,6 +77,9 @@ func _on_simulation_tick(delta: float) -> void:
 func apply_damage(amount: float) -> void:
 	health = maxf(health - amount, 0.0)
 	if health > 0.0:
+		if _sprite != null:
+			_sprite.modulate = Color(1.0,0.55,0.48)
+		get_tree().create_timer(0.12).timeout.connect(_restore_tint)
 		return
 	var drops_value: Variant = definition.get("drops", {})
 	if drops_value is Dictionary:
@@ -71,3 +89,7 @@ func apply_damage(amount: float) -> void:
 	GameState.add_journal(str(definition.get("name", enemy_id)), "Confirmation", "Observed behavior and combat response have been recorded in the field journal.")
 	GameState.notify("%s neutralized." % str(definition.get("name", enemy_id)), "success")
 	queue_free()
+
+func _restore_tint() -> void:
+	if _sprite != null and is_instance_valid(_sprite):
+		_sprite.modulate = Color.WHITE

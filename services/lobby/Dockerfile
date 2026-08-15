@@ -1,6 +1,7 @@
 FROM python:3.13-alpine
 WORKDIR /app
 COPY lobby.py /app/lobby.py
+COPY persistence.py /app/persistence.py
 RUN addgroup -S ironveil && adduser -S -G ironveil ironveil && mkdir -p /data && chown -R ironveil:ironveil /data /app
 USER ironveil
 EXPOSE 8080

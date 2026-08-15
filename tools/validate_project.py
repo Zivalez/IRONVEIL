@@ -24,6 +24,7 @@ REQUIRED = [
     "nginx.conf",
     "IRONVEIL_MASTER_PROMPT.md",
     "IRONVEIL_GAME_BLUEPRINT.md",
+    "IRONVEIL_FINAL_GAME_BLUEPRINT_v2.md",
     "PROJECT_STATE.md",
     "DECISIONS.md",
     "CHANGELOG.md",
@@ -56,6 +57,15 @@ REQUIRED = [
     "scripts/game/industrial_hammer.gd",
     "scripts/game/industrial_station.gd",
     "scripts/game/irrigation_pump.gd",
+    "scripts/core/account_manager.gd",
+    "scripts/core/infrastructure_network.gd",
+    "scripts/game/engineering_node.gd",
+    "scripts/game/late_fabricator.gd",
+    "scripts/game/veil_terminal.gd",
+    "scripts/ui/title_screen.gd",
+    "services/lobby/persistence.py",
+    "tools/test_persistence_contract.py",
+    "docs/PHASE4_PRODUCTION_CANDIDATE.md",
 ]
 
 CATALOGS = [
@@ -464,6 +474,48 @@ def check_phase3_contract() -> None:
         fail("Phase 3 example env must remain available while real env files stay ignored")
 
 
+def check_phase4_contract() -> None:
+    biomes = load_catalog("biomes.json")
+    regions = {rid for rid, record in biomes.items() if record.get("region") is True}
+    required_regions = {"green_hollow", "ashlands", "flooded_basin", "iron_mountains", "frostline", "the_deep", "veil_nexus"}
+    if not required_regions.issubset(regions):
+        fail("Phase 4 missing final regions: " + ", ".join(sorted(required_regions - regions)))
+
+    technologies = load_catalog("technologies.json")
+    for technology in ("primitive", "mechanical", "industrial", "steam", "electrical", "logistics", "veil"):
+        if technology not in technologies:
+            fail(f"Phase 4 technology progression missing: {technology}")
+
+    game_state = (ROOT / "scripts/core/game_state.gd").read_text(encoding="utf-8")
+    for term in ("mine_lift_online", "regional_purifier_online", "deep_rail_online", "veil_gateway_online", "veil_ending", "game_complete"):
+        if term not in game_state:
+            fail(f"Phase 4 progression state missing: {term}")
+
+    project = (ROOT / "project.godot").read_text(encoding="utf-8")
+    for autoload in ("AccountManager", "InfrastructureNetwork"):
+        if autoload not in project:
+            fail(f"Phase 4 autoload missing: {autoload}")
+
+    lobby = (ROOT / "services/lobby/lobby.py").read_text(encoding="utf-8")
+    persistence = (ROOT / "services/lobby/persistence.py").read_text(encoding="utf-8")
+    for route in ('/auth/register', '/auth/login', '/worlds', '/checkpoint', '/invite'):
+        if route not in lobby:
+            fail(f"Phase 4 API route missing: {route}")
+    for term in ("pbkdf2_hmac", "_atomic_json", "checksum", "MAX_CHECKPOINTS", "join_invite"):
+        if term not in persistence:
+            fail(f"Phase 4 persistence safety missing: {term}")
+
+    network = (ROOT / "scripts/core/network_manager.gd").read_text(encoding="utf-8")
+    for term in ("_request_world_object", "_request_container_transfer", "_room_world_objects", "_room_containers"):
+        if term not in network:
+            fail(f"Phase 4 authoritative shared state missing: {term}")
+
+    title = (ROOT / "scripts/ui/title_screen.gd").read_text(encoding="utf-8")
+    for term in ("ACCOUNT ACCESS", "PERSISTENT WORLDS", "NEW PERSONAL", "NEW SHARED", "JOIN SHARED WORLD"):
+        if term not in title:
+            fail(f"Phase 4 product entry flow missing: {term}")
+
+
 def main() -> None:
     check_required()
     check_data()
@@ -477,6 +529,7 @@ def main() -> None:
     check_no_foreign_string_api_calls()
     check_phase2_contract()
     check_phase3_contract()
+    check_phase4_contract()
     print("IRONVEIL STATIC VALIDATION: PASS")
     print("Note: static validation does not replace running Godot or docker build.")
 

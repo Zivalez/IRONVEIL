@@ -1,8 +1,18 @@
 # PROJECT STATE — IRONVEIL
 
 **Last updated:** 2026-08-16  
-**Current phase:** **Phase 3 — MVP implementation candidate**  
-**Owner override:** Phase 3 implementation was explicitly requested even though the previous Phase-2 multiplayer runtime checklist was not fully proven. That debt remains visible below; it is not treated as passed.
+**Current phase:** **Phase 4 — full-route production candidate**  
+**Scope:** A complete source route now spans account/world selection through all six core regions and the Veil ending. Runtime and deployment acceptance debt remains explicit and is not treated as passed.
+
+## Phase 4 source completed
+
+- Product entry flow: guest, account creation/login/logout, personal/shared world creation, world list, invites, and continue.
+- Server-side cross-browser persistence with atomic metadata, checksummed rolling snapshots, membership, and per-player state.
+- Stable persistent shared-world room identity, server membership gate, crop/object authority, transactional containers, reconnect state, and crash-safe room checkpoints.
+- Final camera model, expanded industrial field console, reduced-motion/high-contrast preferences, and animated character/enemy feedback.
+- Iron Mountains, Frostline, The Deep, and Veil Nexus added to the Phase-3 regions.
+- Steam, electrical generation/load/storage, pollution purification, rail logistics, Veil gateway, and three endings added.
+- Full objective route now contains 33 states from first food to final Veil consequence.
 
 ## Implemented in source
 
@@ -59,8 +69,8 @@ Data-driven NPC definitions include specialization, stated need, barter cost and
 4. General inventory, farming, most machine inventory and ordinary enemy state are not yet fully room-server authoritative. Shared progression/boss authority is stronger than general simulation authority.
 5. Public WSS/Traefik long-session behavior needs real deployment verification.
 6. Forced crash/checkpoint restore and resource-limit stress need real tests.
-7. Phase-3 content is an MVP systems/content candidate; it does **not** honestly provide 15–25 hours of authored content yet.
-8. Pixel assets remain representative development art, not final production-quality Hi-Bit art.
+7. Authored content implements the complete critical route, but the blueprint's 60–100-hour ambition is not claimed without playtime telemetry and a production art/content campaign.
+8. Pixel assets remain a coherent development set; the screenshot-level final Hi-Bit art gate requires visual review of an actual export.
 
 ## Phase 3 acceptance checklist
 
@@ -84,6 +94,6 @@ Data-driven NPC definitions include specialization, stated need, barter cost and
 
 ## Next
 
-1. Push candidate to GitHub and let Dokploy run the Godot 4.7.1 CI gate.
-2. Fix any engine-level parser/runtime issue before adding further Phase-3 content.
-3. Run solo three-region progression, then 2→4 client co-op/security acceptance.
+1. Run the Docker/Godot 4.7.1 build gate and capture its PASS markers.
+2. Play the full 33-step solo route in the exported Web client.
+3. Run Browser A/B persistence, then 2→4-client shared-world and restart recovery acceptance.

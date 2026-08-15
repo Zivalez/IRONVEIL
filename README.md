@@ -2,8 +2,20 @@
 
 **IRONVEIL** is a 2.5D isometric survival/engineering RPG built with Godot 4.x. Progression is knowledge-driven: observe systems, understand them, build working infrastructure, then automate it.
 
-> **Current repository phase:** **Phase 3 — MVP implementation candidate**.  
-> Phase 1 Web First Playable has been reported running by the project owner. Phase 3 was explicitly requested by the owner before every Phase-2 multiplayer acceptance item was proven; unresolved runtime/co-op debt remains tracked in `PROJECT_STATE.md` and is not marked passed.
+> **Current repository phase:** **Phase 4 — full-route production candidate (1.0.0 source)**.  
+> The source now implements account/world entry, server persistence, stable shared worlds, six core regions, late technology, and all three Veil endings. Runtime/deployment debt remains tracked in `PROJECT_STATE.md` and is not marked passed by static inspection.
+
+## Full Game Route
+
+```text
+Account / Guest → Personal / Shared World
+→ Green Hollow → Ashwick → Foundry
+→ Ashlands → Flooded Basin → Iron Mountains
+→ Frostline → The Deep → Veil Nexus
+→ Restore / Destroy / Rewrite
+```
+
+Phase 4 adds server-side cross-browser checkpoints, persistent shared-world membership, steam/electrical/rail systems, a 33-state objective chain, and the final Veil decision. See `docs/PHASE4_PRODUCTION_CANDIDATE.md` for the precise source and runtime acceptance boundary.
 
 ## Phase 2 Vertical Slice
 
@@ -41,7 +53,7 @@ Green Hollow / Ashwick / Foundry
 
 The three MVP regions are **Green Hollow**, **Ashlands**, and **Flooded Basin**. Survival now includes temperature, fatigue, stamina, stress, morale, body-part injury state and infection risk. Crafting is enforced across handcraft/workshop/industrial tiers, and industrial output requires live mechanical power.
 
-Phase-3 source does **not** claim the blueprint's 15–25 hours of authored content yet; this is a systems/content implementation candidate awaiting real Godot/Web/co-op acceptance.
+The source implements a complete critical path but does **not** turn the blueprint's 60–100-hour content ambition into a release claim without measured playtime and deployed acceptance.
 
 ## Visual Direction
 
@@ -108,7 +120,7 @@ Single-player simulation remains:
 Input/UI → gameplay adapters → GameState → TickManager / MechanicalNetwork / DataRegistry / ChunkManager
 ```
 
-The Phase 2 networking implementation currently provides authenticated room membership, server-clamped movement replication, roster replication and shared vertical-slice progression flags. **Inventory, survival, general enemy simulation and the full machine simulation have not yet all been migrated to server authority; Furnace Saint health/vulnerability is server-owned in co-op**, so public competitive/anti-cheat claims are explicitly out of scope until that authority migration and desync testing are finished.
+The Phase 4 networking layer provides membership-gated persistent rooms, server-clamped movement, roster replication, authoritative shared progression/boss state, bounded crop/world-object state, and idempotent shared-container transactions. Per-player inventory, survival, and general enemy AI remain client-character state; IRONVEIL therefore protects shared-world integrity without claiming invasive competitive anti-cheat.
 
 ## Requirements
 
@@ -240,10 +252,11 @@ tools/                    validators and local contract tests
 
 ## Source of Truth
 
-- `IRONVEIL_GAME_BLUEPRINT.md`
+- `IRONVEIL_FINAL_GAME_BLUEPRINT_v2.md`
+- `IRONVEIL_GAME_BLUEPRINT.md` (historical Phase-3 baseline)
 - `IRONVEIL_MASTER_PROMPT.md`
 - `PROJECT_STATE.md`
 - `DECISIONS.md`
 - `CHANGELOG.md`
 
-Do not begin Phase 3 until Phase 2 is verified end-to-end in solo and 2–4 player co-op and the vertical slice can be completed through Furnace Saint without a crash or major desync.
+Before a public release, complete every runtime/deployment gate in `docs/PHASE4_PRODUCTION_CANDIDATE.md`; static validation alone is not release acceptance.

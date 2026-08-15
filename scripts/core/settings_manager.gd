@@ -17,6 +17,7 @@ const KEYBIND_DEFAULTS := {
 	"craft_gear": KEY_C,
 	"craft_bandage": KEY_B,
 	"journal": KEY_J,
+	"inventory": KEY_I,
 	"settings": KEY_ESCAPE,
 	"help": KEY_H,
 	"lobby": KEY_N,
@@ -24,6 +25,7 @@ const KEYBIND_DEFAULTS := {
 	"load": KEY_F9,
 	"camera_left": KEY_Q,
 	"camera_right": KEY_E,
+	"camera_reset": KEY_R,
 }
 
 var settings: Dictionary = {
@@ -68,6 +70,9 @@ var settings: Dictionary = {
 		"text_scale": 1.0,
 		"colorblind_mode": "off",
 		"subtitles": true,
+		"reduced_motion": false,
+		"high_contrast": false,
+		"camera_shake": true,
 	},
 	"network": {
 		"display_name": "Survivor",

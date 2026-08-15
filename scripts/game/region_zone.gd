@@ -27,3 +27,7 @@ func _on_body_entered(body: Node3D) -> void:
 			GameState.advance_objective(13)
 		elif region_id == "flooded_basin" and GameState.objective_step == 17:
 			GameState.advance_objective(18)
+		elif region_id == "iron_mountains" and GameState.objective_step == 21:
+			GameState.advance_objective(22)
+		elif region_id == "frostline" and GameState.objective_step == 24:
+			GameState.advance_objective(25)

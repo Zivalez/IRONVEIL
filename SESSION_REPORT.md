@@ -1,5 +1,7 @@
 # SESSION REPORT — Phase 2 Vertical Slice Implementation
 
+> Historical report. Current Phase-4 status and acceptance boundaries are in `PROJECT_STATE.md` and `docs/PHASE4_PRODUCTION_CANDIDATE.md`.
+
 ## 1. Selesai
 
 - Phase 2 continuous solo route implemented: Green Hollow → Workshop → Ashwick → Foundry Vault → Furnace Saint.
