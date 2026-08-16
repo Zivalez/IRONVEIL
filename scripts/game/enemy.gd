@@ -65,7 +65,8 @@ func _on_simulation_tick(delta: float) -> void:
 		velocity.y = -0.1
 	move_and_slide()
 	if _sprite != null:
-		_sprite.position.y = 0.75 + (0.0 if bool(SettingsManager.get_value("accessibility", "reduced_motion", false)) else sin(_animation_time * 7.0) * 0.045)
+		var bob_on: bool = SettingsManager.juice_enabled("walk_bob")
+		_sprite.position.y = 0.75 + (0.0 if not bob_on else sin(_animation_time * 7.0) * 0.045 * SettingsManager.juice_intensity())
 		if absf(velocity.x) > 0.1:
 			_sprite.flip_h = velocity.x < 0.0
 	if distance <= float(definition.get("attack_range", 1.3)) and attack_cooldown <= 0.0:
@@ -77,9 +78,13 @@ func _on_simulation_tick(delta: float) -> void:
 func apply_damage(amount: float) -> void:
 	health = maxf(health - amount, 0.0)
 	if health > 0.0:
-		if _sprite != null:
-			_sprite.modulate = Color(1.0,0.55,0.48)
-		get_tree().create_timer(0.12).timeout.connect(_restore_tint)
+		if _sprite != null and SettingsManager.juice_enabled("hit_flash"):
+			_sprite.modulate = Color(1.0, 0.45, 0.40)
+			if SettingsManager.juice_enabled("attack_squash"):
+				var tw := create_tween()
+				tw.tween_property(_sprite, "scale", Vector3(1.18, 0.82, 1.0), 0.05)
+				tw.tween_property(_sprite, "scale", Vector3.ONE, 0.10)
+		get_tree().create_timer(0.14).timeout.connect(_restore_tint)
 		return
 	var drops_value: Variant = definition.get("drops", {})
 	if drops_value is Dictionary:
@@ -88,7 +93,14 @@ func apply_damage(amount: float) -> void:
 			GameState.add_item(str(item_id_variant), int(drops[item_id_variant]))
 	GameState.add_journal(str(definition.get("name", enemy_id)), "Confirmation", "Observed behavior and combat response have been recorded in the field journal.")
 	GameState.notify("%s neutralized." % str(definition.get("name", enemy_id)), "success")
-	queue_free()
+	AudioManager.play_game("hit")
+	if _sprite != null and SettingsManager.juice_enabled("attack_squash"):
+		var tw2 := create_tween()
+		tw2.tween_property(_sprite, "scale", Vector3(1.4, 0.5, 1.0), 0.08)
+		tw2.tween_property(_sprite, "modulate", Color(1, 1, 1, 0), 0.12)
+		tw2.tween_callback(queue_free)
+	else:
+		queue_free()
 
 func _restore_tint() -> void:
 	if _sprite != null and is_instance_valid(_sprite):

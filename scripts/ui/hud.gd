@@ -39,6 +39,7 @@ var _rebind_buttons: Dictionary = {}
 const COLORBLIND_VALUES: Array[String] = ["off", "protanopia", "deuteranopia", "tritanopia"]
 
 func _ready() -> void:
+	add_to_group("hud")
 	layer = 20
 	_build_ui()
 	GameState.inventory_changed.connect(_update_inventory)
@@ -373,9 +374,8 @@ func _build_accessibility_tab(tabs: TabContainer) -> void:
 	tabs.add_child(box)
 	box.add_child(_slider_row("Text scale", 0.8, 1.5, float(SettingsManager.get_value("accessibility", "text_scale", 1.0)), "accessibility", "text_scale"))
 	box.add_child(_check_row("Subtitles / text cues", "accessibility", "subtitles"))
-	box.add_child(_check_row("Reduced motion", "accessibility", "reduced_motion"))
+	box.add_child(_check_row("Reduced motion (disables most juice)", "accessibility", "reduced_motion"))
 	box.add_child(_check_row("High contrast interface", "accessibility", "high_contrast"))
-	box.add_child(_check_row("Camera shake", "accessibility", "camera_shake"))
 	var row := HBoxContainer.new()
 	var label := Label.new()
 	label.text = "Colorblind palette"
@@ -388,6 +388,20 @@ func _build_accessibility_tab(tabs: TabContainer) -> void:
 	options.item_selected.connect(_on_colorblind_selected)
 	row.add_child(options)
 	box.add_child(row)
+	# --- Juice / Feel ---
+	var juice_title := Label.new()
+	juice_title.text = "◆  JUICE / FEEL"
+	juice_title.add_theme_font_size_override("font_size", 14)
+	juice_title.add_theme_color_override("font_color", Color(0.95, 0.78, 0.38, 1.0))
+	box.add_child(juice_title)
+	box.add_child(_check_row("Camera shake", "accessibility", "camera_shake"))
+	box.add_child(_check_row("Attack squash & stretch", "accessibility", "attack_squash"))
+	box.add_child(_check_row("Hit flash", "accessibility", "hit_flash"))
+	box.add_child(_check_row("Hit sparks", "accessibility", "hit_sparks"))
+	box.add_child(_check_row("Walk bob", "accessibility", "walk_bob"))
+	box.add_child(_check_row("Combat juice", "accessibility", "combat_juice"))
+	box.add_child(_check_row("Ambient particles", "accessibility", "ambient_particles"))
+	box.add_child(_slider_row("Juice intensity", 0.0, 1.5, float(SettingsManager.get_value("accessibility", "juice_intensity", 1.0)), "accessibility", "juice_intensity"))
 
 func _build_network_settings_tab(tabs: TabContainer) -> void:
 	var box := _tab_box("Network")

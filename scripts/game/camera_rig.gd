@@ -117,9 +117,11 @@ func transform_input(input: Vector2) -> Vector3:
 
 ## Call this from combat / heavy impacts
 func add_shake(strength: float = 0.35, duration: float = 0.22) -> void:
-	if bool(SettingsManager.get_value("accessibility", "reduced_motion", false)):
+	if not SettingsManager.juice_enabled("camera_shake"):
 		return
-	if not bool(SettingsManager.get_value("accessibility", "camera_shake", true)):
+	var intensity: float = SettingsManager.juice_intensity()
+	strength *= intensity
+	if strength <= 0.01:
 		return
 	_shake_strength = maxf(_shake_strength, strength)
 	_shake_duration = maxf(_shake_duration, duration)

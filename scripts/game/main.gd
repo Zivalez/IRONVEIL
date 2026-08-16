@@ -11,6 +11,7 @@ const MechanicalPressScript = preload("res://scripts/game/mechanical_press.gd")
 const EnemyScript = preload("res://scripts/game/enemy.gd")
 const HUDScript = preload("res://scripts/ui/hud.gd")
 const MobileControlsScript = preload("res://scripts/ui/mobile_controls.gd")
+const AmbientLifeScript = preload("res://scripts/game/ambient_life.gd")
 const OccluderScript = preload("res://scripts/game/occluder.gd")
 const VisualFactory = preload("res://scripts/game/visual_factory.gd")
 const PostProcessScript = preload("res://scripts/game/post_process.gd")
@@ -462,6 +463,14 @@ func _spawn_ui() -> void:
 	mobile_controls = MobileControlsScript.new()
 	mobile_controls.configure(player, camera_rig, hud)
 	add_child(mobile_controls)
+	var ambient_life = AmbientLifeScript.new()
+	ambient_life.name = "AmbientLife"
+	ambient_life.configure(player)
+	add_child(ambient_life)
+	if hud.has_signal("modal_state_changed"):
+		if not hud.modal_state_changed.is_connected(player._on_modal_state_changed):
+			hud.modal_state_changed.connect(player._on_modal_state_changed)
+	AudioManager.set_ambient_region("green_hollow")
 
 func _spawn_post_processing() -> void:
 	var post = PostProcessScript.new()

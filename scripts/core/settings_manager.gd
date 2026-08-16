@@ -75,6 +75,13 @@ var settings: Dictionary = {
 		"reduced_motion": false,
 		"high_contrast": false,
 		"camera_shake": true,
+		"attack_squash": true,
+		"hit_flash": true,
+		"hit_sparks": true,
+		"walk_bob": true,
+		"combat_juice": true,
+		"ambient_particles": true,
+		"juice_intensity": 1.0,
 	},
 	"network": {
 		"display_name": "Survivor",
@@ -109,7 +116,6 @@ func load_settings() -> void:
 		var defaults: Dictionary = defaults_value as Dictionary
 		for key in defaults:
 			settings[section][key] = config.get_value(section, key, defaults[key])
-	# Merge new keybind defaults into older save files instead of replacing them.
 	var binds_value: Variant = get_value("controls", "keybinds", {})
 	var binds: Dictionary = {}
 	if binds_value is Dictionary:
@@ -119,6 +125,25 @@ func load_settings() -> void:
 			binds[action] = KEYBIND_DEFAULTS[action]
 	settings["controls"]["keybinds"] = binds
 	_migrate_network_url()
+	_migrate_juice_defaults()
+
+func _migrate_juice_defaults() -> void:
+	var acc: Dictionary = settings.get("accessibility", {}) as Dictionary
+	var defaults: Dictionary = {
+		"attack_squash": true,
+		"hit_flash": true,
+		"hit_sparks": true,
+		"walk_bob": true,
+		"combat_juice": true,
+		"ambient_particles": true,
+		"juice_intensity": 1.0,
+		"camera_shake": true,
+		"reduced_motion": false,
+	}
+	for key in defaults:
+		if not acc.has(key):
+			acc[key] = defaults[key]
+	settings["accessibility"] = acc
 
 func _migrate_network_url() -> void:
 	var current: String = str(get_value("network", "lobby_url", "")).strip_edges()
@@ -172,6 +197,17 @@ func get_keybind(action: String) -> int:
 
 func keybind_name(action: String) -> String:
 	return OS.get_keycode_string(get_keybind(action))
+
+func juice_enabled(key: String) -> bool:
+	if bool(get_value("accessibility", "reduced_motion", false)):
+		if key in ["camera_shake", "attack_squash", "hit_flash", "hit_sparks", "walk_bob", "combat_juice"]:
+			return false
+	return bool(get_value("accessibility", key, true))
+
+func juice_intensity() -> float:
+	if bool(get_value("accessibility", "reduced_motion", false)):
+		return 0.0
+	return clampf(float(get_value("accessibility", "juice_intensity", 1.0)), 0.0, 1.5)
 
 func _ensure_input_actions() -> void:
 	var binds_value: Variant = get_value("controls", "keybinds", {})
