@@ -42,6 +42,9 @@ var _control_scrim: ColorRect
 var _control_button: Button
 var _left_pane: Control
 var _right_pane: Control
+var _admin_scrim: ColorRect
+var _admin_token_edit: LineEdit
+var _admin_log: RichTextLabel
 
 func _ready() -> void:
 	layer = 900
@@ -686,3 +689,106 @@ func _on_service_status_changed(online: bool, detail: String) -> void:
 func _set_status(message: String, is_error: bool) -> void:
 	_status.text = message
 	_status.add_theme_color_override("font_color", BAD if is_error else MUTED)
+
+
+func _open_admin() -> void:
+	if _admin_scrim == null:
+		_build_admin()
+	_admin_scrim.visible = true
+	_admin_scrim.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(_admin_scrim, "modulate:a", 1.0, 0.2)
+
+
+func _build_admin() -> void:
+	_admin_scrim = ColorRect.new()
+	_admin_scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_admin_scrim.color = Color(0.02, 0.02, 0.03, 0.88)
+	_admin_scrim.visible = false
+	_root.add_child(_admin_scrim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_admin_scrim.add_child(center)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(520, 420)
+	panel.add_theme_stylebox_override("panel", _card_style())
+	center.add_child(panel)
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left", 20)
+	m.add_theme_constant_override("margin_right", 20)
+	m.add_theme_constant_override("margin_top", 16)
+	m.add_theme_constant_override("margin_bottom", 16)
+	panel.add_child(m)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	m.add_child(box)
+	box.add_child(_lab("ADMIN", 12, BRASS))
+	box.add_child(_lab("Server management", 20, TEXT))
+	box.add_child(_lab("Requires ADMIN_TOKEN from Dokploy env.", 12, MUTED))
+	_admin_token_edit = _field(box, "ADMIN TOKEN", "paste token", true)
+	var row := HBoxContainer.new()
+	box.add_child(row)
+	var load_btn := Button.new()
+	load_btn.text = "LOAD STATS"
+	load_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_btn(load_btn, "primary")
+	load_btn.pressed.connect(_admin_load)
+	row.add_child(load_btn)
+	var close := Button.new()
+	close.text = "CLOSE"
+	_style_btn(close, "ghost")
+	close.pressed.connect(func() -> void: _admin_scrim.visible = false)
+	row.add_child(close)
+	_admin_log = RichTextLabel.new()
+	_admin_log.bbcode_enabled = true
+	_admin_log.custom_minimum_size = Vector2(0, 240)
+	_admin_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_admin_log.add_theme_color_override("default_color", TEXT)
+	box.add_child(_admin_log)
+	if not AccountManager.admin_stats_received.is_connected(_on_admin_stats):
+		AccountManager.admin_stats_received.connect(_on_admin_stats)
+
+
+func _admin_load() -> void:
+	_admin_log.text = "Loading…"
+	AccountManager.admin_stats(_admin_token_edit.text.strip_edges())
+
+
+func _on_admin_stats(stats: Dictionary) -> void:
+	var lines: PackedStringArray = []
+	lines.append("[b]Accounts[/b] %s   [b]Worlds[/b] %s   [b]Sessions[/b] %s" % [
+		str(stats.get("accounts", 0)), str(stats.get("worlds", 0)), str(stats.get("sessions", 0))
+	])
+	lines.append("[b]Live rooms[/b] %s" % str(stats.get("live_room_count", 0)))
+	var rooms: Variant = stats.get("live_rooms", [])
+	if rooms is Array:
+		for r in rooms:
+			if r is Dictionary:
+				lines.append("• %s  %s/%s players" % [
+					str(r.get("name", "?")), str(r.get("players", 0)), str(r.get("max_players", 4))
+				])
+	lines.append("")
+	lines.append("[b]Worlds[/b]")
+	var worlds_val: Variant = stats.get("world_list", [])
+	if worlds_val is Array:
+		for w in worlds_val:
+			if w is Dictionary:
+				lines.append("• %s (%s) id=%s" % [str(w.get("name")), str(w.get("kind")), str(w.get("id"))])
+	lines.append("")
+	lines.append("[b]Accounts[/b]")
+	var accs: Variant = stats.get("account_list", [])
+	if accs is Array:
+		for a in accs:
+			if a is Dictionary:
+				lines.append("• %s  id=%s" % [str(a.get("nickname")), str(a.get("id"))])
+	_admin_log.text = "\n".join(lines)
+
+
+func _delete_selected_world() -> void:
+	var selected: PackedInt32Array = _world_list.get_selected_items()
+	if selected.is_empty() or selected[0] >= _world_ids.size():
+		_on_request_failed("Select a world to delete.")
+		return
+	_set_status("DELETING WORLD…", false)
+	AccountManager.delete_world(_world_ids[selected[0]])
+
