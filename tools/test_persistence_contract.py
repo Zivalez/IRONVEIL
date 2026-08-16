@@ -16,6 +16,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def assert_membership_repair(temp_path: Path) -> None:
+    repair_store = temp_path / "repair-persistence.json"
+    repair_store.write_text(json.dumps({
+        "accounts": {"account-a": {"id": "account-a", "nickname": "RepairOwner", "display_name": "RepairOwner"}},
+        "sessions": {},
+        "worlds": {"world-a": {"id": "world-a", "name": "Recovered World", "kind": "personal", "owner_id": "account-a", "members": {}}},
+        "invites": {},
+    }), encoding="utf-8")
+    code = "import sys; sys.path.insert(0, %r); from persistence import PersistenceStore; store=PersistenceStore(); assert store.worlds['world-a']['members']['account-a'] == 'owner'" % str(ROOT / "services/lobby")
+    env = os.environ | {
+        "WORLD_STORE_PATH": str(repair_store),
+        "WORLD_SNAPSHOT_PATH": str(temp_path / "repair-worlds"),
+    }
+    subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, check=True)
+
+
 def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -40,6 +56,7 @@ def main() -> int:
     port = free_port()
     with tempfile.TemporaryDirectory(prefix="ironveil-persistence-") as temp:
         temp_path = Path(temp)
+        assert_membership_repair(temp_path)
         env = os.environ | {
             "LOBBY_HOST": "127.0.0.1",
             "LOBBY_PORT": str(port),
@@ -85,6 +102,7 @@ def main() -> int:
             browser_b_token = login["session_token"]
             status, listing = request(base + "/worlds", token=browser_b_token)
             assert status == 200 and listing["worlds"][0]["region"] == "iron_mountains"
+            assert listing["owned"] == 1 and listing["limit"] >= 1
             status, loaded = request(base + f"/worlds/{world_id}", token=browser_b_token)
             assert status == 200
             assert loaded["snapshot"]["world"]["flags"]["mine_lift_online"] is True

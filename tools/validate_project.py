@@ -546,7 +546,7 @@ def check_phase4_contract() -> None:
             fail(f"Phase 4 authoritative shared state missing: {term}")
 
     title = (ROOT / "scripts/ui/title_screen.gd").read_text(encoding="utf-8")
-    for term in ("ACCOUNT GATEWAY", "WORLD ARCHIVE", "MY WORLDS", "CREATE WORLD", "JOIN BY CODE"):
+    for term in ("ACCOUNT / PERSISTENT ACCESS", "WORLD ARCHIVE", "WORLDS", "CREATE WORLD", "JOIN CODE"):
         if term not in title:
             fail(f"Phase 4 product entry flow missing: {term}")
 

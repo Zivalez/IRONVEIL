@@ -2,6 +2,7 @@ extends Node
 
 signal auth_changed(authenticated: bool, account: Dictionary)
 signal worlds_updated(worlds: Array)
+signal world_limit_updated(owned: int, limit: int)
 signal world_loaded(world: Dictionary, snapshot: Dictionary)
 signal request_failed(message: String)
 signal checkpoint_saved(world: Dictionary)
@@ -152,6 +153,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		"list_worlds":
 			var value: Variant = response.get("worlds", [])
 			worlds = (value as Array).duplicate(true) if value is Array else []
+			world_limit_updated.emit(int(response.get("owned", worlds.size())), int(response.get("limit", 12)))
 			worlds_updated.emit(worlds.duplicate(true))
 		"create_world", "join_world":
 			list_worlds()

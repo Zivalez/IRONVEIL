@@ -217,7 +217,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/worlds":
             account = self.require_account()
             if account is not None:
-                self.json_response(HTTPStatus.OK, {"worlds": PERSISTENCE.list_worlds(account["id"])})
+                usage = PERSISTENCE.world_usage(account["id"])
+                self.json_response(HTTPStatus.OK, {"worlds": PERSISTENCE.list_worlds(account["id"]), "owned": usage["owned"], "limit": usage["limit"]})
             return
         match = re.fullmatch(r"/worlds/([A-Za-z0-9\-]+)", path)
         if match:

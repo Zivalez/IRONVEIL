@@ -2,7 +2,7 @@ config_version=5
 
 [application]
 config/name="IRONVEIL"
-config/version="1.2.0"
+config/version="1.3.0"
 config/icon="res://assets/branding/ironveil_icon.png"
 run/main_scene="res://scenes/boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")

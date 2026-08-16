@@ -97,6 +97,26 @@ class PersistenceStore:
                         account.pop("email", None)
                         migrated = True
                     used.add(nickname.lower())
+
+                # Older and interrupted deployments could leave a world with a valid
+                # owner_id but no matching members entry. The world then counted
+                # against the owner's limit while remaining invisible in /worlds.
+                # Repair that relationship during every restore.
+                for world in self.worlds.values():
+                    if not isinstance(world, dict):
+                        continue
+                    owner_id = str(world.get("owner_id", ""))
+                    members_value = world.get("members", {})
+                    members: dict[str, str] = {}
+                    if isinstance(members_value, dict):
+                        members = {str(key): str(role) for key, role in members_value.items()}
+                    elif isinstance(members_value, list):
+                        members = {str(member_id): "member" for member_id in members_value}
+                        migrated = True
+                    if owner_id in self.accounts and members.get(owner_id) != "owner":
+                        members[owner_id] = "owner"
+                        migrated = True
+                    world["members"] = members
                 if migrated:
                     self._save()
         except Exception as exc:
@@ -199,7 +219,7 @@ class PersistenceStore:
         with self.lock:
             owned = sum(1 for world in self.worlds.values() if world.get("owner_id") == account_id)
             if owned >= MAX_WORLDS_PER_ACCOUNT:
-                raise StoreError("World limit reached.")
+                raise StoreError("World limit reached (%d of %d owned)." % (owned, MAX_WORLDS_PER_ACCOUNT))
             world_id = uuid.uuid4().hex[:16]
             timestamp = _now()
             safe_modifiers = modifiers if isinstance(modifiers, dict) else {}
@@ -242,6 +262,11 @@ class PersistenceStore:
         with self.lock:
             result = [self.public_world(w, account_id) for w in self.worlds.values() if account_id in w.get("members", {})]
             return sorted(result, key=lambda item: int(item["last_played"]), reverse=True)
+
+    def world_usage(self, account_id: str) -> dict[str, int]:
+        with self.lock:
+            owned = sum(1 for world in self.worlds.values() if isinstance(world, dict) and world.get("owner_id") == account_id)
+            return {"owned": owned, "limit": MAX_WORLDS_PER_ACCOUNT}
 
     def _member_world(self, account_id: str, world_id: str) -> dict[str, Any]:
         world = self.worlds.get(world_id)

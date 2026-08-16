@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.3.0-source - ZVLZ editorial UI and invisible-world repair
+
+- Rebuilt the entry UI around the visual language of speed.zvlz.me: ivory grid, carbon panels, orange and wine accents, square controls, thin borders, and offset shadows.
+- Added staged entrance motion, mode fades, and a subtle live-service pulse.
+- Kept world actions explicit through WORLDS, CREATE, and JOIN CODE modes.
+- Added live owned-world usage such as `0 / 12 OWNED`.
+- Repaired legacy worlds whose owner relationship existed but membership entry was missing, which previously made them count toward the limit while remaining invisible.
+- Added migration and API contract coverage for repaired ownership and world-limit metadata.
+
 ## 1.2.0-source - World gateway UI and same-origin service repair
 
 - Rebuilt the title screen as a layered field-network dashboard with stronger hierarchy, richer industrial styling, and live service status.
