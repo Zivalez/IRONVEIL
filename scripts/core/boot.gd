@@ -66,7 +66,7 @@ func _start_gameplay() -> void:
 	_status_label.text = "Loading gameplay scene..."
 	var packed: PackedScene = ResourceLoader.load("res://scenes/main.tscn") as PackedScene
 	if packed == null:
-		_show_failure("Gameplay scene could not be loaded.", "Open the browser developer console (F12) for the exact Godot parser/resource error.")
+		_show_failure("Gameplay scene could not be loaded.", "Open the browser developer console (F12) for the exact parser/resource error.")
 		return
 
 	var gameplay: Node = packed.instantiate()
@@ -86,7 +86,7 @@ func _start_gameplay() -> void:
 			details.append("player node missing")
 		if not has_camera:
 			details.append("active Camera3D missing")
-		_show_failure("Gameplay startup did not complete.", "Detected: %s. Check F12 Console for the first Godot error." % ", ".join(details))
+		_show_failure("Gameplay startup did not complete.", "Detected: %s. Check F12 Console for the first engine error." % ", ".join(details))
 		return
 
 	print("IRONVEIL_BOOT_OK: gameplay scene, player, and active camera initialized")

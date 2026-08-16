@@ -11,6 +11,7 @@ const SCRIPT_PATHS: Array[String] = [
 	"res://scripts/core/infrastructure_network.gd",
 	"res://scripts/data/data_registry.gd",
 	"res://scripts/core/settings_manager.gd",
+	"res://scripts/core/input_profile.gd",
 	"res://scripts/core/account_manager.gd",
 	"res://scripts/core/network_manager.gd",
 	"res://scripts/core/game_state.gd",
@@ -52,6 +53,8 @@ const SCRIPT_PATHS: Array[String] = [
 	"res://scripts/server/room_server.gd",
 	"res://scripts/ui/hud.gd",
 	"res://scripts/ui/title_screen.gd",
+	"res://scripts/ui/virtual_joystick.gd",
+	"res://scripts/ui/mobile_controls.gd",
 ]
 const SCENE_PATHS: Array[String] = [
 	"res://scenes/boot.tscn",
@@ -65,6 +68,7 @@ const REQUIRED_AUTOLOADS: Array[String] = [
 	"InfrastructureNetwork",
 	"ChunkManager",
 	"SettingsManager",
+	"InputProfile",
 	"AccountManager",
 	"NetworkManager",
 	"GameState",

@@ -20,6 +20,9 @@ var field_inventory_text: RichTextLabel
 var field_crafting_text: RichTextLabel
 var field_machine_text: RichTextLabel
 var field_character_text: RichTextLabel
+var _root_control: Control
+var _status_panel: PanelContainer
+var _inventory_panel: PanelContainer
 
 var room_list: ItemList
 var room_name_edit: LineEdit
@@ -47,15 +50,17 @@ func _ready() -> void:
 	NetworkManager.lobby_request_failed.connect(_on_lobby_error)
 	NetworkManager.connection_state_changed.connect(_on_connection_state_changed)
 	InfrastructureNetwork.network_changed.connect(_on_infrastructure_changed)
+	InputProfile.mode_changed.connect(_on_input_mode_changed)
 	_update_inventory(GameState.inventory)
 	_update_survival(GameState.survival)
 	_update_objective(GameState.objective_step, GameState.current_objective())
 	_update_journal(GameState.journal_entries)
+	_apply_input_layout()
 
 func set_interaction_prompt(text: String) -> void:
 	if prompt_label == null:
 		return
-	prompt_label.text = text
+	prompt_label.text = ("USE // " + text) if InputProfile.is_touch_mode() and not text.is_empty() else text
 	prompt_label.visible = not text.is_empty()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -79,26 +84,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle_field_panel()
 
 func _build_ui() -> void:
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root)
-	_build_status_panel(root)
-	_build_inventory_panel(root)
-	_build_boss_panel(root)
-	_build_prompt(root)
-	_build_notification(root)
-	_build_journal(root)
-	_build_field_console(root)
-	_build_settings(root)
-	_build_lobby(root)
-	_build_help(root)
+	_root_control = Control.new()
+	_root_control.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_root_control)
+	_build_status_panel(_root_control)
+	_build_inventory_panel(_root_control)
+	_build_boss_panel(_root_control)
+	_build_prompt(_root_control)
+	_build_notification(_root_control)
+	_build_journal(_root_control)
+	_build_field_console(_root_control)
+	_build_settings(_root_control)
+	_build_lobby(_root_control)
+	_build_help(_root_control)
 
 func _build_status_panel(root: Control) -> void:
-	var top_left: PanelContainer = _panel(Vector2(18, 18), Vector2(420, 150), false)
-	root.add_child(top_left)
+	_status_panel = _panel(Vector2(18, 18), Vector2(420, 150), false)
+	root.add_child(_status_panel)
 	var box := VBoxContainer.new()
-	top_left.add_child(box)
+	_status_panel.add_child(box)
 	var title := Label.new()
 	title.text = "IRONVEIL // FIELD STATE"
 	title.add_theme_font_size_override("font_size", 18)
@@ -111,11 +116,11 @@ func _build_status_panel(root: Control) -> void:
 	box.add_child(objective_label)
 
 func _build_inventory_panel(root: Control) -> void:
-	var top_right: PanelContainer = _panel(Vector2(-288, 18), Vector2(270, 118), true)
-	root.add_child(top_right)
+	_inventory_panel = _panel(Vector2(-288, 18), Vector2(270, 118), true)
+	root.add_child(_inventory_panel)
 	inventory_label = Label.new()
 	inventory_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	top_right.add_child(inventory_label)
+	_inventory_panel.add_child(inventory_label)
 
 func _build_field_console(root: Control) -> void:
 	field_panel = _modal_panel(Vector2(920, 610))
@@ -269,6 +274,18 @@ func _build_audio_tab(tabs: TabContainer) -> void:
 func _build_controls_tab(tabs: TabContainer) -> void:
 	var box := _tab_box("Controls")
 	tabs.add_child(box)
+	var mode_row := HBoxContainer.new()
+	var mode_label := Label.new()
+	mode_label.text = "Input layout"
+	mode_label.custom_minimum_size.x = 220
+	mode_row.add_child(mode_label)
+	var mode_options := OptionButton.new()
+	for value in ["Auto detect", "Desktop", "Mobile / Touch"]:
+		mode_options.add_item(value)
+	mode_options.selected = [InputProfile.MODE_AUTO, InputProfile.MODE_DESKTOP, InputProfile.MODE_TOUCH].find(InputProfile.selected_mode())
+	mode_options.item_selected.connect(_on_input_mode_selected)
+	mode_row.add_child(mode_options)
+	box.add_child(mode_row)
 	box.add_child(_slider_row("Mouse sensitivity", 0.2, 2.0, float(SettingsManager.get_value("controls", "mouse_sensitivity", 1.0)), "controls", "mouse_sensitivity"))
 	for action in ["move_up", "move_left", "move_down", "move_right", "sprint", "interact", "attack", "medical_quick", "craft_bandage", "camera_left", "camera_right", "inventory", "journal", "lobby"]:
 		var row := HBoxContainer.new()
@@ -521,6 +538,17 @@ func _toggle_field_panel() -> void:
 		_refresh_field_console()
 	AudioManager.play_ui("open" if field_panel.visible else "close")
 
+func mobile_toggle(section: String) -> void:
+	match section:
+		"inventory":
+			_toggle_field_panel()
+		"journal":
+			_toggle_journal()
+		"lobby":
+			_toggle_lobby()
+		"settings":
+			_toggle_settings()
+
 func _on_journal_close_pressed() -> void:
 	journal_panel.visible = false
 
@@ -555,6 +583,11 @@ func _on_lobby_url_changed(value: String) -> void:
 
 func _on_slider_changed(value: float, section: String, key: String) -> void:
 	SettingsManager.set_value(section, key, value)
+
+func _on_input_mode_selected(index: int) -> void:
+	var values: Array[String] = [InputProfile.MODE_AUTO, InputProfile.MODE_DESKTOP, InputProfile.MODE_TOUCH]
+	if index >= 0 and index < values.size():
+		InputProfile.set_mode(values[index])
 
 func _begin_rebind(action: String) -> void:
 	_pending_rebind_action = action
@@ -617,7 +650,10 @@ func _on_connection_state_changed(state: String, message: String) -> void:
 	_show_notification(message, "success" if state == "online" else "info")
 
 func _update_survival(survival: Dictionary) -> void:
-	status_label.text = "%s | HP %3.0f  STAM %3.0f  HUN %3.0f  THR %3.0f\nTEMP %.1fC  FAT %2.0f  STRESS %2.0f  MORALE %2.0f  INF %2.0f" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)), float(survival.get("health", 0.0)), float(survival.get("stamina", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0)), float(survival.get("body_temperature", 36.8)), float(survival.get("fatigue", 0.0)), float(survival.get("stress", 0.0)), float(survival.get("morale", 0.0)), float(survival.get("infection_risk", 0.0))]
+	if InputProfile.is_touch_mode():
+		status_label.text = "%s  //  HP %.0f  ST %.0f  H %.0f  W %.0f  %.1fC" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)), float(survival.get("health", 0.0)), float(survival.get("stamina", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0)), float(survival.get("body_temperature", 36.8))]
+	else:
+		status_label.text = "%s | HP %3.0f  STAM %3.0f  HUN %3.0f  THR %3.0f\nTEMP %.1fC  FAT %2.0f  STRESS %2.0f  MORALE %2.0f  INF %2.0f" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)), float(survival.get("health", 0.0)), float(survival.get("stamina", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0)), float(survival.get("body_temperature", 36.8)), float(survival.get("fatigue", 0.0)), float(survival.get("stress", 0.0)), float(survival.get("morale", 0.0)), float(survival.get("infection_risk", 0.0))]
 	_refresh_field_console()
 
 func _update_objective(step: int, text: String) -> void:
@@ -746,3 +782,19 @@ func _on_settings_changed(section: String, key: String, _value: Variant) -> void
 	if section == "controls":
 		_refresh_rebind_labels()
 		_update_inventory(GameState.inventory)
+
+func _on_input_mode_changed(_mode: String) -> void:
+	_apply_input_layout()
+	_update_survival(GameState.survival)
+	_update_inventory(GameState.inventory)
+
+func _apply_input_layout() -> void:
+	if _status_panel == null or _inventory_panel == null or prompt_label == null:
+		return
+	var touch: bool = InputProfile.is_touch_mode()
+	_status_panel.position = Vector2(14, 14) if touch else Vector2(18, 18)
+	_status_panel.size = Vector2(530, 126) if touch else Vector2(420, 150)
+	_inventory_panel.visible = not touch and bool(SettingsManager.get_value("gameplay", "show_hud", true))
+	prompt_label.position = Vector2(-330, -236) if touch else Vector2(-330, -90)
+	status_label.add_theme_font_size_override("font_size", 14 if touch else 16)
+	objective_label.custom_minimum_size = Vector2(500, 50) if touch else Vector2(390, 60)

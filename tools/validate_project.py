@@ -63,6 +63,9 @@ REQUIRED = [
     "scripts/game/late_fabricator.gd",
     "scripts/game/veil_terminal.gd",
     "scripts/ui/title_screen.gd",
+    "scripts/ui/mobile_controls.gd",
+    "scripts/ui/virtual_joystick.gd",
+    "scripts/core/input_profile.gd",
     "assets/branding/ironveil_boot_splash.png",
     "assets/branding/ironveil_icon.png",
     "services/lobby/persistence.py",
@@ -217,6 +220,8 @@ def check_deploy_contract() -> None:
         fail("Web preset must exist with thread support disabled")
     if 'include_filter="*.json"' not in presets:
         fail("Web preset must explicitly include JSON runtime catalogs")
+    if 'html/experimental_virtual_keyboard=true' not in presets:
+        fail("Web mobile sign-in requires the virtual keyboard bridge")
     project = (ROOT / "project.godot").read_text(encoding="utf-8")
     for branding_setting in (
         'config/icon="res://assets/branding/ironveil_icon.png"',
@@ -228,6 +233,12 @@ def check_deploy_contract() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     if "barichello/godot-ci:4.7.1" not in dockerfile:
         fail("Docker builder is not pinned to Godot CI 4.7.1")
+    if 'InputProfile="*res://scripts/core/input_profile.gd"' not in project:
+        fail("Mobile/desktop input profile autoload is missing")
+    mobile = (ROOT / "scripts/ui/mobile_controls.gd").read_text(encoding="utf-8")
+    for mobile_term in ("VirtualJoystickScript", "InputEventScreenTouch", "InputEventScreenDrag", "adjust_zoom", "rotate_step"):
+        if mobile_term not in mobile:
+            fail("Mobile control contract missing: " + mobile_term)
     nginx = (ROOT / "nginx.conf").read_text(encoding="utf-8")
     if "application/wasm wasm;" not in nginx:
         fail("nginx does not explicitly map .wasm")

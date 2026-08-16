@@ -1,0 +1,1000 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 94f82b3..22e8194 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,14 @@
+ # CHANGELOG
+ 
++## 1.1.0-source — Adaptive desktop/mobile Web controls
++
++- Added first-run input selection for detected touch/mobile visitors, with a persistent desktop override.
++- Added a responsive landscape mobile HUD with virtual movement joystick, context USE, STRIKE, hold-to-RUN, food, aid, pack, journal, room, and menu controls.
++- Added native touch gestures outside control zones: horizontal swipe rotates the isometric camera and two-finger pinch zooms.
++- Added portrait rotation guidance, touch-safe button sizing, compact survival/objective HUD, and a Settings input-layout selector.
++- Desktop keyboard/mouse controls remain unchanged and the touch overlay stays hidden in desktop mode.
++- Bumped the deployment marker to 1.1.0 so stale Dokploy containers are immediately identifiable.
++
+ ## 1.0.2-source — Original IRONVEIL branding
+ 
+ - Added an original forged-metal IRONVEIL boot splash and application/browser icon.
+diff --git a/README.md b/README.md
+index 3bb3e2b..eb64226 100644
+--- a/README.md
++++ b/README.md
+@@ -89,6 +89,22 @@ All keyboard controls can be rebound from Settings → Controls. Defaults:
+ | H | Help |
+ | F5 / F9 | Save / Load |
+ 
++### Mobile Web controls
++
++Touch-capable visitors receive a first-run **Mobile / Touch** or **Desktop**
++choice. The choice persists and remains changeable from the title screen or
++Settings → Controls. Mobile play is landscape-first:
++
++- left virtual joystick for movement;
++- hold **RUN**, tap **USE** or **STRIKE** for core field actions;
++- **FOOD** and **AID** quick actions;
++- **PACK**, **JOURNAL**, **ROOM**, and **MENU** compact navigation;
++- swipe horizontally across the unobstructed world area to rotate the camera;
++- pinch with two fingers to zoom.
++
++The gesture surface excludes joystick, action, and quick-navigation zones so
++normal multi-touch movement and actions do not rotate the camera accidentally.
++
+ ## Settings
+ 
+ Phase 2 exposes all master-prompt categories:
+diff --git a/docs/DOKPLOY_REDEPLOY_1.1.0.md b/docs/DOKPLOY_REDEPLOY_1.1.0.md
+new file mode 100644
+index 0000000..7168a92
+--- /dev/null
++++ b/docs/DOKPLOY_REDEPLOY_1.1.0.md
+@@ -0,0 +1,33 @@
++# Dokploy redeploy verification — IRONVEIL 1.1.0
++
++The repository must be deployed as a **Docker Compose** project, not as a
++single Dockerfile application. Use branch `main`, repository root `/`, and
++Compose file `docker-compose.phase3.yml`.
++
++Required Dokploy environment values:
++
++```text
++PUBLIC_MODE=true
++ROOM_TOKEN_SECRET=<one random secret, at least 32 characters>
++PUBLIC_WS_URL=wss://ironveil.zvlz.dev/room-ws
++ALLOWED_ORIGIN=https://ironveil.zvlz.dev
++TRUST_PROXY_HEADERS=true
++```
++
++Attach `ironveil.zvlz.dev` to the `client` service on container port `80`.
++The public domain must not point directly at `lobby` or `room-server`.
++
++After a push, trigger a new build/redeploy. Restarting the existing container
++does not fetch the commit or rebuild the Web export. If the platform offers a
++build-cache toggle, clear/disable it for this migration.
++
++Acceptance endpoints:
++
++```text
++GET https://ironveil.zvlz.dev/build-info
++GET https://ironveil.zvlz.dev/api/health
++```
++
++The first endpoint must report build `1.1.0` and input `desktop-touch`. The
++second must return an `ok: true` JSON object. If either URL serves the game
++HTML/canvas, the running client container still uses an old nginx image.
+diff --git a/docs/PHASE4_PRODUCTION_CANDIDATE.md b/docs/PHASE4_PRODUCTION_CANDIDATE.md
+index 4b6e76d..f7784a1 100644
+--- a/docs/PHASE4_PRODUCTION_CANDIDATE.md
++++ b/docs/PHASE4_PRODUCTION_CANDIDATE.md
+@@ -1,6 +1,6 @@
+ # IRONVEIL Phase 4 — Production Candidate Contract
+ 
+-**Version:** 1.0.2 source candidate  
++**Version:** 1.1.0 source candidate  
+ **Blueprint:** `IRONVEIL_FINAL_GAME_BLUEPRINT_v2.md`
+ 
+ This source advances the prior three-region MVP into a complete beginning-to-ending Web-game route. “Production candidate” is deliberate: source and service contracts pass in the artifact environment, while the Godot 4.7.1/Web runtime and deployed 2–4-client acceptance gates still require a runtime that is not installed in this environment.
+@@ -72,7 +72,7 @@ python3 tools/test_persistence_contract.py
+ The Docker client build remains the authoritative Godot compile, headless test, and Web export gate:
+ 
+ ```bash
+-docker build --no-cache -t ironveil:1.0.2 .
++docker build --no-cache -t ironveil:1.1.0 .
+ docker compose --env-file .env.phase3 -f docker-compose.phase3.yml up --build
+ ```
+ 
+diff --git a/export_presets.cfg b/export_presets.cfg
+index 5bbaa27..0b5de4f 100644
+--- a/export_presets.cfg
++++ b/export_presets.cfg
+@@ -27,7 +27,7 @@ html/custom_html_shell=""
+ html/head_include=""
+ html/canvas_resize_policy=2
+ html/focus_canvas_on_start=true
+-html/experimental_virtual_keyboard=false
++html/experimental_virtual_keyboard=true
+ progressive_web_app/enabled=false
+ 
+ [preset.1]
+diff --git a/nginx.conf b/nginx.conf
+index a836160..f0ef78b 100644
+--- a/nginx.conf
++++ b/nginx.conf
+@@ -35,8 +35,8 @@ server {
+     location = /build-info {
+         default_type application/json;
+         add_header Cache-Control "no-store";
+-        add_header X-Ironveil-Build "1.0.2" always;
+-        return 200 '{"name":"IRONVEIL","build":"1.0.2","auth":"nickname-password","api":"/api","room_ws":"/room-ws"}';
++        add_header X-Ironveil-Build "1.1.0" always;
++        return 200 '{"name":"IRONVEIL","build":"1.1.0","auth":"nickname-password","input":"desktop-touch","api":"/api","room_ws":"/room-ws"}';
+     }
+ 
+     # Keep the browser on one HTTPS origin. Dokploy only needs to publish the
+@@ -51,7 +51,7 @@ server {
+         proxy_set_header Origin $http_origin;
+         proxy_read_timeout 60s;
+         proxy_send_timeout 60s;
+-        add_header X-Ironveil-Build "1.0.2" always;
++        add_header X-Ironveil-Build "1.1.0" always;
+     }
+ 
+     location /room-ws {
+@@ -65,7 +65,7 @@ server {
+         proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+         proxy_read_timeout 86400s;
+         proxy_send_timeout 86400s;
+-        add_header X-Ironveil-Build "1.0.2" always;
++        add_header X-Ironveil-Build "1.1.0" always;
+     }
+ 
+     # Godot's default Web export keeps stable names such as index.pck/index.wasm.
+diff --git a/project.godot b/project.godot
+index 1d08eda..1f7cf1a 100644
+--- a/project.godot
++++ b/project.godot
+@@ -2,7 +2,7 @@ config_version=5
+ 
+ [application]
+ config/name="IRONVEIL"
+-config/version="1.0.2"
++config/version="1.1.0"
+ config/icon="res://assets/branding/ironveil_icon.png"
+ run/main_scene="res://scenes/boot.tscn"
+ config/features=PackedStringArray("4.7", "GL Compatibility")
+@@ -18,6 +18,7 @@ TickManager="*res://scripts/core/tick_manager.gd"
+ InfrastructureNetwork="*res://scripts/core/infrastructure_network.gd"
+ ChunkManager="*res://scripts/core/chunk_manager.gd"
+ SettingsManager="*res://scripts/core/settings_manager.gd"
++InputProfile="*res://scripts/core/input_profile.gd"
+ AccountManager="*res://scripts/core/account_manager.gd"
+ NetworkManager="*res://scripts/core/network_manager.gd"
+ GameState="*res://scripts/core/game_state.gd"
+@@ -30,6 +31,11 @@ window/size/viewport_height=720
+ window/size/window_width_override=1280
+ window/size/window_height_override=720
+ window/stretch/mode="canvas_items"
++window/handheld/orientation=4
++
++[input_devices]
++pointing/emulate_mouse_from_touch=true
++pointing/emulate_touch_from_mouse=true
+ 
+ [rendering]
+ textures/default_filters/use_nearest_mipmap_filter=true
+diff --git a/scripts/core/boot.gd b/scripts/core/boot.gd
+index 7549618..0378979 100644
+--- a/scripts/core/boot.gd
++++ b/scripts/core/boot.gd
+@@ -66,7 +66,7 @@ func _start_gameplay() -> void:
+ 	_status_label.text = "Loading gameplay scene..."
+ 	var packed: PackedScene = ResourceLoader.load("res://scenes/main.tscn") as PackedScene
+ 	if packed == null:
+-		_show_failure("Gameplay scene could not be loaded.", "Open the browser developer console (F12) for the exact Godot parser/resource error.")
++		_show_failure("Gameplay scene could not be loaded.", "Open the browser developer console (F12) for the exact parser/resource error.")
+ 		return
+ 
+ 	var gameplay: Node = packed.instantiate()
+@@ -86,7 +86,7 @@ func _start_gameplay() -> void:
+ 			details.append("player node missing")
+ 		if not has_camera:
+ 			details.append("active Camera3D missing")
+-		_show_failure("Gameplay startup did not complete.", "Detected: %s. Check F12 Console for the first Godot error." % ", ".join(details))
++		_show_failure("Gameplay startup did not complete.", "Detected: %s. Check F12 Console for the first engine error." % ", ".join(details))
+ 		return
+ 
+ 	print("IRONVEIL_BOOT_OK: gameplay scene, player, and active camera initialized")
+diff --git a/scripts/core/input_profile.gd b/scripts/core/input_profile.gd
+new file mode 100644
+index 0000000..5308f13
+--- /dev/null
++++ b/scripts/core/input_profile.gd
+@@ -0,0 +1,73 @@
++extends Node
++
++signal mode_changed(mode: String)
++
++const MODE_AUTO := "auto"
++const MODE_DESKTOP := "desktop"
++const MODE_TOUCH := "touch"
++
++var movement_vector: Vector2 = Vector2.ZERO
++var sprint_held: bool = false
++var _queued_actions: Array[String] = []
++
++func _ready() -> void:
++	get_viewport().size_changed.connect(_on_viewport_size_changed)
++
++func is_touch_capable() -> bool:
++	if DisplayServer.is_touchscreen_available():
++		return true
++	if OS.get_name() == "Web" and Engine.has_singleton("JavaScriptBridge"):
++		var bridge: Object = Engine.get_singleton("JavaScriptBridge")
++		var touch_points: Variant = bridge.call("eval", "navigator.maxTouchPoints || 0")
++		var coarse_pointer: Variant = bridge.call("eval", "window.matchMedia && window.matchMedia('(pointer: coarse)').matches")
++		return int(touch_points) > 0 or bool(coarse_pointer)
++	return false
++
++func selected_mode() -> String:
++	return str(SettingsManager.get_value("controls", "input_mode", MODE_AUTO))
++
++func resolved_mode() -> String:
++	var selected: String = selected_mode()
++	if selected == MODE_TOUCH or selected == MODE_DESKTOP:
++		return selected
++	return MODE_TOUCH if is_touch_capable() else MODE_DESKTOP
++
++func is_touch_mode() -> bool:
++	return resolved_mode() == MODE_TOUCH
++
++func should_offer_first_choice() -> bool:
++	return selected_mode() == MODE_AUTO and is_touch_capable()
++
++func set_mode(mode: String) -> void:
++	if mode not in [MODE_AUTO, MODE_DESKTOP, MODE_TOUCH]:
++		return
++	SettingsManager.set_value("controls", "input_mode", mode, false)
++	if mode != MODE_TOUCH:
++		clear_touch_state()
++	mode_changed.emit(resolved_mode())
++
++func set_movement(value: Vector2) -> void:
++	movement_vector = value.limit_length(1.0) if is_touch_mode() else Vector2.ZERO
++
++func set_sprint(pressed: bool) -> void:
++	sprint_held = pressed and is_touch_mode()
++
++func queue_action(action: String) -> void:
++	if is_touch_mode() and not _queued_actions.has(action):
++		_queued_actions.append(action)
++
++func consume_action(action: String) -> bool:
++	var index: int = _queued_actions.find(action)
++	if index == -1:
++		return false
++	_queued_actions.remove_at(index)
++	return true
++
++func clear_touch_state() -> void:
++	movement_vector = Vector2.ZERO
++	sprint_held = false
++	_queued_actions.clear()
++
++func _on_viewport_size_changed() -> void:
++	if selected_mode() == MODE_AUTO:
++		mode_changed.emit(resolved_mode())
+diff --git a/scripts/core/settings_manager.gd b/scripts/core/settings_manager.gd
+index b2a0df3..2a2a75c 100644
+--- a/scripts/core/settings_manager.gd
++++ b/scripts/core/settings_manager.gd
+@@ -58,6 +58,7 @@ var settings: Dictionary = {
+ 	},
+ 	"controls": {
+ 		"mouse_sensitivity": 1.0,
++		"input_mode": "auto",
+ 		"keybinds": KEYBIND_DEFAULTS.duplicate(true),
+ 	},
+ 	"gameplay": {
+diff --git a/scripts/game/camera_rig.gd b/scripts/game/camera_rig.gd
+index 5852040..dbc1d97 100644
+--- a/scripts/game/camera_rig.gd
++++ b/scripts/game/camera_rig.gd
+@@ -11,6 +11,7 @@ var camera: Camera3D
+ var _last_occluder: Node = null
+ 
+ func _ready() -> void:
++	add_to_group("camera_rig")
+ 	camera = Camera3D.new()
+ 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+ 	camera.size = float(SettingsManager.get_value("graphics", "camera_zoom", 18.0))
+@@ -44,9 +45,17 @@ func _unhandled_input(event: InputEvent) -> void:
+ 		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+ 		if mouse_event.pressed:
+ 			if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
+-				camera.size = maxf(10.0, camera.size - 1.0)
++				adjust_zoom(-1.0)
+ 			elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+-				camera.size = minf(28.0, camera.size + 1.0)
++				adjust_zoom(1.0)
++
++func rotate_step(direction: int) -> void:
++	if bool(SettingsManager.get_value("gameplay", "camera_rotation", true)):
++		target_yaw += deg_to_rad(90.0) * clampi(direction, -1, 1)
++
++func adjust_zoom(delta: float) -> void:
++	if camera != null:
++		camera.size = clampf(camera.size + delta, 10.0, 28.0)
+ 
+ func transform_input(input: Vector2) -> Vector3:
+ 	return Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
+diff --git a/scripts/game/main.gd b/scripts/game/main.gd
+index e3ba58a..2e27cd6 100644
+--- a/scripts/game/main.gd
++++ b/scripts/game/main.gd
+@@ -10,6 +10,7 @@ const MechanicalSawScript = preload("res://scripts/game/mechanical_saw.gd")
+ const MechanicalPressScript = preload("res://scripts/game/mechanical_press.gd")
+ const EnemyScript = preload("res://scripts/game/enemy.gd")
+ const HUDScript = preload("res://scripts/ui/hud.gd")
++const MobileControlsScript = preload("res://scripts/ui/mobile_controls.gd")
+ const OccluderScript = preload("res://scripts/game/occluder.gd")
+ const VisualFactory = preload("res://scripts/game/visual_factory.gd")
+ const PostProcessScript = preload("res://scripts/game/post_process.gd")
+@@ -35,6 +36,7 @@ const VeilTerminalScript = preload("res://scripts/game/veil_terminal.gd")
+ var player: CharacterBody3D
+ var camera_rig: Node3D
+ var hud: CanvasLayer
++var mobile_controls: CanvasLayer
+ var remote_players: Dictionary = {}
+ var _autosave_timer: Timer
+ 
+@@ -457,6 +459,9 @@ func _spawn_ui() -> void:
+ 	hud = HUDScript.new()
+ 	add_child(hud)
+ 	player.interaction_prompt_changed.connect(hud.set_interaction_prompt)
++	mobile_controls = MobileControlsScript.new()
++	mobile_controls.configure(player, camera_rig, hud)
++	add_child(mobile_controls)
+ 
+ func _spawn_post_processing() -> void:
+ 	var post = PostProcessScript.new()
+diff --git a/scripts/game/player.gd b/scripts/game/player.gd
+index 57a939f..5dc3e67 100644
+--- a/scripts/game/player.gd
++++ b/scripts/game/player.gd
+@@ -21,7 +21,8 @@ func _process(delta: float) -> void:
+ 	_animation_time += delta
+ 	var moving: bool = Vector2(velocity.x, velocity.z).length() > 0.2
+ 	var reduced: bool = bool(SettingsManager.get_value("accessibility", "reduced_motion", false))
+-	var bob: float = 0.0 if reduced or not moving else absf(sin(_animation_time * (13.0 if Input.is_action_pressed("sprint") else 9.0))) * 0.07
++	var sprinting: bool = Input.is_action_pressed("sprint") or InputProfile.sprint_held
++	var bob: float = 0.0 if reduced or not moving else absf(sin(_animation_time * (13.0 if sprinting else 9.0))) * 0.07
+ 	_sprite.position.y = 0.95 + bob
+ 	if absf(velocity.x) > 0.1:
+ 		_sprite.flip_h = velocity.x < 0.0
+@@ -49,6 +50,9 @@ func _build_visual() -> void:
+ func _on_simulation_tick(delta: float) -> void:
+ 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
+ 	var input: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
++	if InputProfile.is_touch_mode():
++		input = InputProfile.movement_vector
++		_consume_touch_actions()
+ 	var world_dir: Vector3 = Vector3(input.x, 0.0, input.y)
+ 	if camera_rig != null and camera_rig.has_method("transform_input"):
+ 		world_dir = camera_rig.transform_input(input).normalized()
+@@ -59,7 +63,7 @@ func _on_simulation_tick(delta: float) -> void:
+ 	var fatigue_factor: float = clampf(1.0 - fatigue / 160.0, 0.55, 1.0)
+ 	if hunger < 15.0 or thirst < 15.0:
+ 		fatigue_factor *= 0.68
+-	var wants_sprint: bool = Input.is_action_pressed("sprint") and world_dir.length() > 0.1 and hunger > 20.0
++	var wants_sprint: bool = (Input.is_action_pressed("sprint") or InputProfile.sprint_held) and world_dir.length() > 0.1 and hunger > 20.0
+ 	var can_sprint: bool = wants_sprint and float(GameState.survival.get("stamina", 0.0)) > 4.0
+ 	var speed: float = sprint_speed if can_sprint else move_speed
+ 	if can_sprint:
+@@ -85,6 +89,19 @@ func _on_simulation_tick(delta: float) -> void:
+ 		_network_accumulator = 0.0
+ 		NetworkManager.submit_local_player_state(global_position, rotation.y)
+ 
++func _consume_touch_actions() -> void:
++	if InputProfile.consume_action("interact"):
++		_interact()
++	if InputProfile.consume_action("attack"):
++		_attack()
++	if InputProfile.consume_action("eat_quick"):
++		if not GameState.consume_food("field_tuber"):
++			if not GameState.consume_food("wild_berries"):
++				GameState.consume_food("spring_water")
++	if InputProfile.consume_action("medical_quick"):
++		if not GameState.use_medical("bandage"):
++			GameState.use_medical("salve")
++
+ func _unhandled_input(event: InputEvent) -> void:
+ 	if event.is_action_pressed("interact"):
+ 		_interact()
+diff --git a/scripts/tests/ci_runner.gd b/scripts/tests/ci_runner.gd
+index 74c1254..d3488c0 100644
+--- a/scripts/tests/ci_runner.gd
++++ b/scripts/tests/ci_runner.gd
+@@ -11,6 +11,7 @@ const SCRIPT_PATHS: Array[String] = [
+ 	"res://scripts/core/infrastructure_network.gd",
+ 	"res://scripts/data/data_registry.gd",
+ 	"res://scripts/core/settings_manager.gd",
++	"res://scripts/core/input_profile.gd",
+ 	"res://scripts/core/account_manager.gd",
+ 	"res://scripts/core/network_manager.gd",
+ 	"res://scripts/core/game_state.gd",
+@@ -52,6 +53,8 @@ const SCRIPT_PATHS: Array[String] = [
+ 	"res://scripts/server/room_server.gd",
+ 	"res://scripts/ui/hud.gd",
+ 	"res://scripts/ui/title_screen.gd",
++	"res://scripts/ui/virtual_joystick.gd",
++	"res://scripts/ui/mobile_controls.gd",
+ ]
+ const SCENE_PATHS: Array[String] = [
+ 	"res://scenes/boot.tscn",
+@@ -65,6 +68,7 @@ const REQUIRED_AUTOLOADS: Array[String] = [
+ 	"InfrastructureNetwork",
+ 	"ChunkManager",
+ 	"SettingsManager",
++	"InputProfile",
+ 	"AccountManager",
+ 	"NetworkManager",
+ 	"GameState",
+diff --git a/scripts/ui/hud.gd b/scripts/ui/hud.gd
+index 252ddcf..ef32f7b 100644
+--- a/scripts/ui/hud.gd
++++ b/scripts/ui/hud.gd
+@@ -20,6 +20,9 @@ var field_inventory_text: RichTextLabel
+ var field_crafting_text: RichTextLabel
+ var field_machine_text: RichTextLabel
+ var field_character_text: RichTextLabel
++var _root_control: Control
++var _status_panel: PanelContainer
++var _inventory_panel: PanelContainer
+ 
+ var room_list: ItemList
+ var room_name_edit: LineEdit
+@@ -47,15 +50,17 @@ func _ready() -> void:
+ 	NetworkManager.lobby_request_failed.connect(_on_lobby_error)
+ 	NetworkManager.connection_state_changed.connect(_on_connection_state_changed)
+ 	InfrastructureNetwork.network_changed.connect(_on_infrastructure_changed)
++	InputProfile.mode_changed.connect(_on_input_mode_changed)
+ 	_update_inventory(GameState.inventory)
+ 	_update_survival(GameState.survival)
+ 	_update_objective(GameState.objective_step, GameState.current_objective())
+ 	_update_journal(GameState.journal_entries)
++	_apply_input_layout()
+ 
+ func set_interaction_prompt(text: String) -> void:
+ 	if prompt_label == null:
+ 		return
+-	prompt_label.text = text
++	prompt_label.text = ("USE // " + text) if InputProfile.is_touch_mode() and not text.is_empty() else text
+ 	prompt_label.visible = not text.is_empty()
+ 
+ func _unhandled_input(event: InputEvent) -> void:
+@@ -79,26 +84,26 @@ func _unhandled_input(event: InputEvent) -> void:
+ 		_toggle_field_panel()
+ 
+ func _build_ui() -> void:
+-	var root := Control.new()
+-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+-	add_child(root)
+-	_build_status_panel(root)
+-	_build_inventory_panel(root)
+-	_build_boss_panel(root)
+-	_build_prompt(root)
+-	_build_notification(root)
+-	_build_journal(root)
+-	_build_field_console(root)
+-	_build_settings(root)
+-	_build_lobby(root)
+-	_build_help(root)
++	_root_control = Control.new()
++	_root_control.set_anchors_preset(Control.PRESET_FULL_RECT)
++	_root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	add_child(_root_control)
++	_build_status_panel(_root_control)
++	_build_inventory_panel(_root_control)
++	_build_boss_panel(_root_control)
++	_build_prompt(_root_control)
++	_build_notification(_root_control)
++	_build_journal(_root_control)
++	_build_field_console(_root_control)
++	_build_settings(_root_control)
++	_build_lobby(_root_control)
++	_build_help(_root_control)
+ 
+ func _build_status_panel(root: Control) -> void:
+-	var top_left: PanelContainer = _panel(Vector2(18, 18), Vector2(420, 150), false)
+-	root.add_child(top_left)
++	_status_panel = _panel(Vector2(18, 18), Vector2(420, 150), false)
++	root.add_child(_status_panel)
+ 	var box := VBoxContainer.new()
+-	top_left.add_child(box)
++	_status_panel.add_child(box)
+ 	var title := Label.new()
+ 	title.text = "IRONVEIL // FIELD STATE"
+ 	title.add_theme_font_size_override("font_size", 18)
+@@ -111,11 +116,11 @@ func _build_status_panel(root: Control) -> void:
+ 	box.add_child(objective_label)
+ 
+ func _build_inventory_panel(root: Control) -> void:
+-	var top_right: PanelContainer = _panel(Vector2(-288, 18), Vector2(270, 118), true)
+-	root.add_child(top_right)
++	_inventory_panel = _panel(Vector2(-288, 18), Vector2(270, 118), true)
++	root.add_child(_inventory_panel)
+ 	inventory_label = Label.new()
+ 	inventory_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+-	top_right.add_child(inventory_label)
++	_inventory_panel.add_child(inventory_label)
+ 
+ func _build_field_console(root: Control) -> void:
+ 	field_panel = _modal_panel(Vector2(920, 610))
+@@ -269,6 +274,18 @@ func _build_audio_tab(tabs: TabContainer) -> void:
+ func _build_controls_tab(tabs: TabContainer) -> void:
+ 	var box := _tab_box("Controls")
+ 	tabs.add_child(box)
++	var mode_row := HBoxContainer.new()
++	var mode_label := Label.new()
++	mode_label.text = "Input layout"
++	mode_label.custom_minimum_size.x = 220
++	mode_row.add_child(mode_label)
++	var mode_options := OptionButton.new()
++	for value in ["Auto detect", "Desktop", "Mobile / Touch"]:
++		mode_options.add_item(value)
++	mode_options.selected = [InputProfile.MODE_AUTO, InputProfile.MODE_DESKTOP, InputProfile.MODE_TOUCH].find(InputProfile.selected_mode())
++	mode_options.item_selected.connect(_on_input_mode_selected)
++	mode_row.add_child(mode_options)
++	box.add_child(mode_row)
+ 	box.add_child(_slider_row("Mouse sensitivity", 0.2, 2.0, float(SettingsManager.get_value("controls", "mouse_sensitivity", 1.0)), "controls", "mouse_sensitivity"))
+ 	for action in ["move_up", "move_left", "move_down", "move_right", "sprint", "interact", "attack", "medical_quick", "craft_bandage", "camera_left", "camera_right", "inventory", "journal", "lobby"]:
+ 		var row := HBoxContainer.new()
+@@ -521,6 +538,17 @@ func _toggle_field_panel() -> void:
+ 		_refresh_field_console()
+ 	AudioManager.play_ui("open" if field_panel.visible else "close")
+ 
++func mobile_toggle(section: String) -> void:
++	match section:
++		"inventory":
++			_toggle_field_panel()
++		"journal":
++			_toggle_journal()
++		"lobby":
++			_toggle_lobby()
++		"settings":
++			_toggle_settings()
++
+ func _on_journal_close_pressed() -> void:
+ 	journal_panel.visible = false
+ 
+@@ -556,6 +584,11 @@ func _on_lobby_url_changed(value: String) -> void:
+ func _on_slider_changed(value: float, section: String, key: String) -> void:
+ 	SettingsManager.set_value(section, key, value)
+ 
++func _on_input_mode_selected(index: int) -> void:
++	var values: Array[String] = [InputProfile.MODE_AUTO, InputProfile.MODE_DESKTOP, InputProfile.MODE_TOUCH]
++	if index >= 0 and index < values.size():
++		InputProfile.set_mode(values[index])
++
+ func _begin_rebind(action: String) -> void:
+ 	_pending_rebind_action = action
+ 	var button_value: Variant = _rebind_buttons.get(action, null)
+@@ -617,7 +650,10 @@ func _on_connection_state_changed(state: String, message: String) -> void:
+ 	_show_notification(message, "success" if state == "online" else "info")
+ 
+ func _update_survival(survival: Dictionary) -> void:
+-	status_label.text = "%s | HP %3.0f  STAM %3.0f  HUN %3.0f  THR %3.0f\nTEMP %.1fC  FAT %2.0f  STRESS %2.0f  MORALE %2.0f  INF %2.0f" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)), float(survival.get("health", 0.0)), float(survival.get("stamina", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0)), float(survival.get("body_temperature", 36.8)), float(survival.get("fatigue", 0.0)), float(survival.get("stress", 0.0)), float(survival.get("morale", 0.0)), float(survival.get("infection_risk", 0.0))]
++	if InputProfile.is_touch_mode():
++		status_label.text = "%s  //  HP %.0f  ST %.0f  H %.0f  W %.0f  %.1fC" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)), float(survival.get("health", 0.0)), float(survival.get("stamina", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0)), float(survival.get("body_temperature", 36.8))]
++	else:
++		status_label.text = "%s | HP %3.0f  STAM %3.0f  HUN %3.0f  THR %3.0f\nTEMP %.1fC  FAT %2.0f  STRESS %2.0f  MORALE %2.0f  INF %2.0f" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)), float(survival.get("health", 0.0)), float(survival.get("stamina", 0.0)), float(survival.get("hunger", 0.0)), float(survival.get("thirst", 0.0)), float(survival.get("body_temperature", 36.8)), float(survival.get("fatigue", 0.0)), float(survival.get("stress", 0.0)), float(survival.get("morale", 0.0)), float(survival.get("infection_risk", 0.0))]
+ 	_refresh_field_console()
+ 
+ func _update_objective(step: int, text: String) -> void:
+@@ -746,3 +782,19 @@ func _on_settings_changed(section: String, key: String, _value: Variant) -> void
+ 	if section == "controls":
+ 		_refresh_rebind_labels()
+ 		_update_inventory(GameState.inventory)
++
++func _on_input_mode_changed(_mode: String) -> void:
++	_apply_input_layout()
++	_update_survival(GameState.survival)
++	_update_inventory(GameState.inventory)
++
++func _apply_input_layout() -> void:
++	if _status_panel == null or _inventory_panel == null or prompt_label == null:
++		return
++	var touch: bool = InputProfile.is_touch_mode()
++	_status_panel.position = Vector2(14, 14) if touch else Vector2(18, 18)
++	_status_panel.size = Vector2(530, 126) if touch else Vector2(420, 150)
++	_inventory_panel.visible = not touch and bool(SettingsManager.get_value("gameplay", "show_hud", true))
++	prompt_label.position = Vector2(-330, -236) if touch else Vector2(-330, -90)
++	status_label.add_theme_font_size_override("font_size", 14 if touch else 16)
++	objective_label.custom_minimum_size = Vector2(500, 50) if touch else Vector2(390, 60)
+diff --git a/scripts/ui/mobile_controls.gd b/scripts/ui/mobile_controls.gd
+new file mode 100644
+index 0000000..7845e20
+--- /dev/null
++++ b/scripts/ui/mobile_controls.gd
+@@ -0,0 +1,179 @@
++extends CanvasLayer
++
++const VirtualJoystickScript = preload("res://scripts/ui/virtual_joystick.gd")
++
++var player: Node
++var camera_rig: Node
++var hud: CanvasLayer
++var _root: Control
++var _controls_root: Control
++var _rotate_notice: PanelContainer
++var _gesture_fingers: Dictionary = {}
++var _gesture_start: Dictionary = {}
++var _last_pinch_distance: float = 0.0
++
++func configure(player_value: Node, camera_value: Node, hud_value: CanvasLayer) -> void:
++	player = player_value
++	camera_rig = camera_value
++	hud = hud_value
++
++func _ready() -> void:
++	layer = 80
++	_build_ui()
++	get_viewport().size_changed.connect(_apply_layout)
++	InputProfile.mode_changed.connect(_on_mode_changed)
++	_on_mode_changed(InputProfile.resolved_mode())
++
++func _build_ui() -> void:
++	_root = Control.new()
++	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
++	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	add_child(_root)
++
++	_controls_root = Control.new()
++	_controls_root.set_anchors_preset(Control.PRESET_FULL_RECT)
++	_controls_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	_root.add_child(_controls_root)
++
++	var joystick: Control = VirtualJoystickScript.new()
++	joystick.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
++	joystick.position = Vector2(22, -206)
++	joystick.size = Vector2(184, 184)
++	joystick.vector_changed.connect(InputProfile.set_movement)
++	_controls_root.add_child(joystick)
++
++	var actions := Control.new()
++	actions.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
++	actions.position = Vector2(-278, -238)
++	actions.size = Vector2(258, 216)
++	actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
++	_controls_root.add_child(actions)
++	var attack := _action_button("STRIKE", Vector2(146, 100), Vector2(104, 104), true)
++	attack.pressed.connect(_queue_action.bind("attack"))
++	actions.add_child(attack)
++	var interact := _action_button("USE", Vector2(56, 34), Vector2(92, 82), false)
++	interact.pressed.connect(_queue_action.bind("interact"))
++	actions.add_child(interact)
++	var sprint := _action_button("RUN", Vector2(32, 128), Vector2(94, 72), false)
++	sprint.button_down.connect(InputProfile.set_sprint.bind(true))
++	sprint.button_up.connect(InputProfile.set_sprint.bind(false))
++	actions.add_child(sprint)
++
++	var quick_bar := HBoxContainer.new()
++	quick_bar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
++	quick_bar.position = Vector2(-410, 18)
++	quick_bar.size = Vector2(392, 50)
++	quick_bar.add_theme_constant_override("separation", 8)
++	quick_bar.mouse_filter = Control.MOUSE_FILTER_PASS
++	_controls_root.add_child(quick_bar)
++	for entry in [["PACK", "inventory"], ["JOURNAL", "journal"], ["ROOM", "lobby"], ["MENU", "settings"]]:
++		var button := _action_button(str(entry[0]), Vector2.ZERO, Vector2(90, 46), false)
++		button.pressed.connect(_toggle_hud.bind(str(entry[1])))
++		quick_bar.add_child(button)
++
++	var utility := HBoxContainer.new()
++	utility.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
++	utility.position = Vector2(-382, -78)
++	utility.size = Vector2(190, 54)
++	utility.add_theme_constant_override("separation", 8)
++	utility.mouse_filter = Control.MOUSE_FILTER_PASS
++	_controls_root.add_child(utility)
++	for entry in [["FOOD", "eat_quick"], ["AID", "medical_quick"]]:
++		var button := _action_button(str(entry[0]), Vector2.ZERO, Vector2(88, 48), false)
++		button.pressed.connect(_queue_action.bind(str(entry[1])))
++		utility.add_child(button)
++
++	_rotate_notice = PanelContainer.new()
++	_rotate_notice.set_anchors_preset(Control.PRESET_CENTER)
++	_rotate_notice.position = Vector2(-240, -90)
++	_rotate_notice.size = Vector2(480, 180)
++	_rotate_notice.add_theme_stylebox_override("panel", _panel_style(0.98))
++	var notice := Label.new()
++	notice.text = "ROTATE DEVICE\n\nIRONVEIL mobile play is designed for landscape orientation."
++	notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
++	notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
++	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	notice.add_theme_font_size_override("font_size", 22)
++	_rotate_notice.add_child(notice)
++	_root.add_child(_rotate_notice)
++
++func _input(event: InputEvent) -> void:
++	if not visible or not InputProfile.is_touch_mode():
++		return
++	if event is InputEventScreenTouch:
++		var touch: InputEventScreenTouch = event as InputEventScreenTouch
++		if touch.pressed:
++			if _is_gesture_area(touch.position):
++				_gesture_fingers[touch.index] = touch.position
++				_gesture_start[touch.index] = touch.position
++		else:
++			if _gesture_start.has(touch.index) and _gesture_fingers.has(touch.index):
++				var travel: Vector2 = (_gesture_fingers[touch.index] as Vector2) - (_gesture_start[touch.index] as Vector2)
++				if absf(travel.x) > 88.0 and absf(travel.x) > absf(travel.y) * 1.4 and camera_rig != null and camera_rig.has_method("rotate_step"):
++					camera_rig.rotate_step(-1 if travel.x > 0.0 else 1)
++			_gesture_fingers.erase(touch.index)
++			_gesture_start.erase(touch.index)
++			_last_pinch_distance = 0.0
++	elif event is InputEventScreenDrag:
++		var drag: InputEventScreenDrag = event as InputEventScreenDrag
++		if _gesture_fingers.has(drag.index):
++			_gesture_fingers[drag.index] = drag.position
++		if _gesture_fingers.size() == 2:
++			var points: Array = _gesture_fingers.values()
++			var distance: float = (points[0] as Vector2).distance_to(points[1] as Vector2)
++			if _last_pinch_distance > 0.0 and camera_rig != null and camera_rig.has_method("adjust_zoom"):
++				camera_rig.adjust_zoom((_last_pinch_distance - distance) * 0.025)
++			_last_pinch_distance = distance
++
++func _is_gesture_area(position_value: Vector2) -> bool:
++	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
++	if position_value.y > viewport_size.y - 250.0:
++		return false
++	if position_value.y < 86.0 and position_value.x > viewport_size.x - 430.0:
++		return false
++	return true
++
++func _queue_action(action: String) -> void:
++	InputProfile.queue_action(action)
++	AudioManager.play_ui("press")
++
++func _toggle_hud(section: String) -> void:
++	if hud != null and hud.has_method("mobile_toggle"):
++		hud.mobile_toggle(section)
++
++func _on_mode_changed(mode: String) -> void:
++	visible = mode == InputProfile.MODE_TOUCH
++	_apply_layout()
++
++func _apply_layout() -> void:
++	if _controls_root == null or _rotate_notice == null:
++		return
++	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
++	var portrait: bool = viewport_size.y > viewport_size.x * 1.05
++	_controls_root.visible = not portrait
++	_rotate_notice.visible = portrait and visible
++
++func _action_button(text_value: String, position_value: Vector2, size_value: Vector2, primary: bool) -> Button:
++	var button := Button.new()
++	button.text = text_value
++	button.position = position_value
++	button.size = size_value
++	button.custom_minimum_size = size_value
++	button.focus_mode = Control.FOCUS_NONE
++	button.add_theme_font_size_override("font_size", 16 if primary else 14)
++	var style: StyleBoxFlat = _panel_style(0.84 if primary else 0.68)
++	style.bg_color = Color(0.52, 0.27, 0.10, 0.84) if primary else Color(0.035, 0.050, 0.046, 0.68)
++	button.add_theme_stylebox_override("normal", style)
++	var pressed_style: StyleBoxFlat = style.duplicate() as StyleBoxFlat
++	pressed_style.bg_color = Color(0.78, 0.43, 0.16, 0.94)
++	button.add_theme_stylebox_override("pressed", pressed_style)
++	return button
++
++func _panel_style(alpha: float) -> StyleBoxFlat:
++	var style := StyleBoxFlat.new()
++	style.bg_color = Color(0.025, 0.034, 0.032, alpha)
++	style.border_color = Color(0.69, 0.48, 0.24, minf(alpha + 0.1, 1.0))
++	style.set_border_width_all(2)
++	style.set_corner_radius_all(12)
++	style.set_content_margin_all(12.0)
++	return style
+diff --git a/scripts/ui/title_screen.gd b/scripts/ui/title_screen.gd
+index 20c3644..2bda068 100644
+--- a/scripts/ui/title_screen.gd
++++ b/scripts/ui/title_screen.gd
+@@ -13,6 +13,9 @@ var _invite_code: LineEdit
+ var _world_list: ItemList
+ var _world_ids: Array[String] = []
+ var _continue_button: Button
++var _control_choice: PanelContainer
++var _control_scrim: ColorRect
++var _control_mode_button: Button
+ 
+ func _ready() -> void:
+ 	layer = 900
+@@ -21,6 +24,9 @@ func _ready() -> void:
+ 	AccountManager.worlds_updated.connect(_on_worlds_updated)
+ 	AccountManager.world_loaded.connect(_on_world_loaded)
+ 	AccountManager.request_failed.connect(_on_request_failed)
++	InputProfile.mode_changed.connect(_on_control_mode_changed)
++	if InputProfile.should_offer_first_choice():
++		_control_scrim.visible = true
+ 	if AccountManager.is_authenticated():
+ 		_on_auth_changed(true, AccountManager.account)
+ 		AccountManager.refresh_session()
+@@ -119,6 +125,72 @@ func _build() -> void:
+ 	_status.modulate = Color(0.68, 0.74, 0.65)
+ 	background.add_child(_status)
+ 
++	_control_mode_button = Button.new()
++	_control_mode_button.text = "CONTROL // %s" % InputProfile.resolved_mode().to_upper()
++	_control_mode_button.position = Vector2(112, 528)
++	_control_mode_button.size = Vector2(260, 46)
++	_style_button(_control_mode_button, false)
++	_control_mode_button.pressed.connect(_show_control_choice)
++	background.add_child(_control_mode_button)
++	_build_control_choice(background)
++
++func _build_control_choice(background: Control) -> void:
++	_control_scrim = ColorRect.new()
++	_control_scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
++	_control_scrim.color = Color(0.008, 0.011, 0.010, 0.86)
++	_control_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
++	_control_scrim.z_index = 29
++	_control_scrim.visible = false
++	background.add_child(_control_scrim)
++	_control_choice = _panel(Vector2(380, 145), Vector2(520, 430))
++	_control_choice.z_index = 30
++	_control_scrim.add_child(_control_choice)
++	var box := VBoxContainer.new()
++	box.add_theme_constant_override("separation", 16)
++	_control_choice.add_child(box)
++	var eyebrow := Label.new()
++	eyebrow.text = "INPUT PROFILE // FIRST DEPLOYMENT"
++	eyebrow.modulate = Color(0.78, 0.58, 0.34)
++	box.add_child(eyebrow)
++	var heading := Label.new()
++	heading.text = "HOW ARE YOU PLAYING?"
++	heading.add_theme_font_size_override("font_size", 27)
++	box.add_child(heading)
++	var detail := Label.new()
++	detail.text = "Choose once; you can change this later from the title screen or Settings."
++	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	detail.custom_minimum_size = Vector2(450, 58)
++	box.add_child(detail)
++	var touch := Button.new()
++	touch.text = "MOBILE / TOUCH\nJoystick + action buttons + native camera gestures"
++	_style_button(touch, true)
++	touch.custom_minimum_size = Vector2(450, 76)
++	touch.pressed.connect(_choose_control_mode.bind(InputProfile.MODE_TOUCH))
++	box.add_child(touch)
++	var desktop := Button.new()
++	desktop.text = "DESKTOP\nKeyboard + mouse"
++	_style_button(desktop, false)
++	desktop.custom_minimum_size = Vector2(450, 70)
++	desktop.pressed.connect(_choose_control_mode.bind(InputProfile.MODE_DESKTOP))
++	box.add_child(desktop)
++	var note := Label.new()
++	note.text = "Touch mode: left joystick, USE / STRIKE / RUN, swipe to rotate, pinch to zoom. Landscape is recommended."
++	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
++	note.modulate = Color(0.62, 0.70, 0.63)
++	box.add_child(note)
++
++func _show_control_choice() -> void:
++	_control_scrim.visible = true
++
++func _choose_control_mode(mode: String) -> void:
++	InputProfile.set_mode(mode)
++	_control_scrim.visible = false
++	_status.text = "CONTROL PROFILE // %s" % mode.to_upper()
++
++func _on_control_mode_changed(mode: String) -> void:
++	if _control_mode_button != null:
++		_control_mode_button.text = "CONTROL // %s" % mode.to_upper()
++
+ func _build_auth_panel() -> void:
+ 	var box := VBoxContainer.new()
+ 	box.add_theme_constant_override("separation", 12)
+diff --git a/scripts/ui/virtual_joystick.gd b/scripts/ui/virtual_joystick.gd
+new file mode 100644
+index 0000000..c96768f
+--- /dev/null
++++ b/scripts/ui/virtual_joystick.gd
+@@ -0,0 +1,61 @@
++extends Control
++
++signal vector_changed(value: Vector2)
++
++var radius: float = 72.0
++var knob_radius: float = 29.0
++var _finger_index: int = -1
++var _value: Vector2 = Vector2.ZERO
++
++func _ready() -> void:
++	mouse_filter = Control.MOUSE_FILTER_STOP
++	custom_minimum_size = Vector2(176, 176)
++	queue_redraw()
++
++func _gui_input(event: InputEvent) -> void:
++	if event is InputEventScreenTouch:
++		var touch: InputEventScreenTouch = event as InputEventScreenTouch
++		if touch.pressed and _finger_index == -1:
++			_finger_index = touch.index
++			_update_from_position(touch.position)
++			accept_event()
++		elif not touch.pressed and touch.index == _finger_index:
++			_finger_index = -1
++			_set_value(Vector2.ZERO)
++			accept_event()
++	elif event is InputEventScreenDrag:
++		var drag: InputEventScreenDrag = event as InputEventScreenDrag
++		if drag.index == _finger_index:
++			_update_from_position(drag.position)
++			accept_event()
++	elif event is InputEventMouseButton:
++		var mouse_button: InputEventMouseButton = event as InputEventMouseButton
++		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
++			_finger_index = 0 if mouse_button.pressed else -1
++			if mouse_button.pressed:
++				_update_from_position(mouse_button.position)
++			else:
++				_set_value(Vector2.ZERO)
++			accept_event()
++	elif event is InputEventMouseMotion and _finger_index == 0:
++		_update_from_position((event as InputEventMouseMotion).position)
++		accept_event()
++
++func _notification(what: int) -> void:
++	if what == NOTIFICATION_DRAW:
++		var center: Vector2 = size * 0.5
++		draw_circle(center, radius, Color(0.025, 0.035, 0.033, 0.56))
++		draw_arc(center, radius, 0.0, TAU, 48, Color(0.63, 0.47, 0.25, 0.75), 3.0, true)
++		draw_circle(center + _value * radius, knob_radius, Color(0.76, 0.48, 0.22, 0.84))
++		draw_arc(center + _value * radius, knob_radius, 0.0, TAU, 32, Color(0.96, 0.79, 0.52, 0.92), 2.0, true)
++
++func _update_from_position(local_position: Vector2) -> void:
++	var delta: Vector2 = local_position - size * 0.5
++	_set_value(delta / radius)
++
++func _set_value(next_value: Vector2) -> void:
++	_value = next_value.limit_length(1.0)
++	if _value.length() < 0.12:
++		_value = Vector2.ZERO
++	vector_changed.emit(_value)
++	queue_redraw()
+diff --git a/tools/validate_project.py b/tools/validate_project.py
+index 0463836..b643a52 100755
+--- a/tools/validate_project.py
++++ b/tools/validate_project.py
+@@ -63,6 +63,9 @@ REQUIRED = [
+     "scripts/game/late_fabricator.gd",
+     "scripts/game/veil_terminal.gd",
+     "scripts/ui/title_screen.gd",
++    "scripts/ui/mobile_controls.gd",
++    "scripts/ui/virtual_joystick.gd",
++    "scripts/core/input_profile.gd",
+     "assets/branding/ironveil_boot_splash.png",
+     "assets/branding/ironveil_icon.png",
+     "services/lobby/persistence.py",
+@@ -217,6 +220,8 @@ def check_deploy_contract() -> None:
+         fail("Web preset must exist with thread support disabled")
+     if 'include_filter="*.json"' not in presets:
+         fail("Web preset must explicitly include JSON runtime catalogs")
++    if 'html/experimental_virtual_keyboard=true' not in presets:
++        fail("Web mobile sign-in requires the virtual keyboard bridge")
+     project = (ROOT / "project.godot").read_text(encoding="utf-8")
+     for branding_setting in (
+         'config/icon="res://assets/branding/ironveil_icon.png"',
+@@ -228,6 +233,12 @@ def check_deploy_contract() -> None:
+     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+     if "barichello/godot-ci:4.7.1" not in dockerfile:
+         fail("Docker builder is not pinned to Godot CI 4.7.1")
++    if 'InputProfile="*res://scripts/core/input_profile.gd"' not in project:
++        fail("Mobile/desktop input profile autoload is missing")
++    mobile = (ROOT / "scripts/ui/mobile_controls.gd").read_text(encoding="utf-8")
++    for mobile_term in ("VirtualJoystickScript", "InputEventScreenTouch", "InputEventScreenDrag", "adjust_zoom", "rotate_step"):
++        if mobile_term not in mobile:
++            fail("Mobile control contract missing: " + mobile_term)
+     nginx = (ROOT / "nginx.conf").read_text(encoding="utf-8")
+     if "application/wasm wasm;" not in nginx:
+         fail("nginx does not explicitly map .wasm")

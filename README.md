@@ -89,6 +89,22 @@ All keyboard controls can be rebound from Settings → Controls. Defaults:
 | H | Help |
 | F5 / F9 | Save / Load |
 
+### Mobile Web controls
+
+Touch-capable visitors receive a first-run **Mobile / Touch** or **Desktop**
+choice. The choice persists and remains changeable from the title screen or
+Settings → Controls. Mobile play is landscape-first:
+
+- left virtual joystick for movement;
+- hold **RUN**, tap **USE** or **STRIKE** for core field actions;
+- **FOOD** and **AID** quick actions;
+- **PACK**, **JOURNAL**, **ROOM**, and **MENU** compact navigation;
+- swipe horizontally across the unobstructed world area to rotate the camera;
+- pinch with two fingers to zoom.
+
+The gesture surface excludes joystick, action, and quick-navigation zones so
+normal multi-touch movement and actions do not rotate the camera accidentally.
+
 ## Settings
 
 Phase 2 exposes all master-prompt categories:

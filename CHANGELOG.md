@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.1.0-source — Adaptive desktop/mobile Web controls
+
+- Added first-run input selection for detected touch/mobile visitors, with a persistent desktop override.
+- Added a responsive landscape mobile HUD with virtual movement joystick, context USE, STRIKE, hold-to-RUN, food, aid, pack, journal, room, and menu controls.
+- Added native touch gestures outside control zones: horizontal swipe rotates the isometric camera and two-finger pinch zooms.
+- Added portrait rotation guidance, touch-safe button sizing, compact survival/objective HUD, and a Settings input-layout selector.
+- Desktop keyboard/mouse controls remain unchanged and the touch overlay stays hidden in desktop mode.
+- Bumped the deployment marker to 1.1.0 so stale Dokploy containers are immediately identifiable.
+
 ## 1.0.2-source — Original IRONVEIL branding
 
 - Added an original forged-metal IRONVEIL boot splash and application/browser icon.

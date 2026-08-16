@@ -58,6 +58,7 @@ var settings: Dictionary = {
 	},
 	"controls": {
 		"mouse_sensitivity": 1.0,
+		"input_mode": "auto",
 		"keybinds": KEYBIND_DEFAULTS.duplicate(true),
 	},
 	"gameplay": {

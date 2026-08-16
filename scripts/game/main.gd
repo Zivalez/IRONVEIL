@@ -10,6 +10,7 @@ const MechanicalSawScript = preload("res://scripts/game/mechanical_saw.gd")
 const MechanicalPressScript = preload("res://scripts/game/mechanical_press.gd")
 const EnemyScript = preload("res://scripts/game/enemy.gd")
 const HUDScript = preload("res://scripts/ui/hud.gd")
+const MobileControlsScript = preload("res://scripts/ui/mobile_controls.gd")
 const OccluderScript = preload("res://scripts/game/occluder.gd")
 const VisualFactory = preload("res://scripts/game/visual_factory.gd")
 const PostProcessScript = preload("res://scripts/game/post_process.gd")
@@ -35,6 +36,7 @@ const VeilTerminalScript = preload("res://scripts/game/veil_terminal.gd")
 var player: CharacterBody3D
 var camera_rig: Node3D
 var hud: CanvasLayer
+var mobile_controls: CanvasLayer
 var remote_players: Dictionary = {}
 var _autosave_timer: Timer
 
@@ -457,6 +459,9 @@ func _spawn_ui() -> void:
 	hud = HUDScript.new()
 	add_child(hud)
 	player.interaction_prompt_changed.connect(hud.set_interaction_prompt)
+	mobile_controls = MobileControlsScript.new()
+	mobile_controls.configure(player, camera_rig, hud)
+	add_child(mobile_controls)
 
 func _spawn_post_processing() -> void:
 	var post = PostProcessScript.new()

@@ -13,6 +13,9 @@ var _invite_code: LineEdit
 var _world_list: ItemList
 var _world_ids: Array[String] = []
 var _continue_button: Button
+var _control_choice: PanelContainer
+var _control_scrim: ColorRect
+var _control_mode_button: Button
 
 func _ready() -> void:
 	layer = 900
@@ -21,6 +24,9 @@ func _ready() -> void:
 	AccountManager.worlds_updated.connect(_on_worlds_updated)
 	AccountManager.world_loaded.connect(_on_world_loaded)
 	AccountManager.request_failed.connect(_on_request_failed)
+	InputProfile.mode_changed.connect(_on_control_mode_changed)
+	if InputProfile.should_offer_first_choice():
+		_control_scrim.visible = true
 	if AccountManager.is_authenticated():
 		_on_auth_changed(true, AccountManager.account)
 		AccountManager.refresh_session()
@@ -118,6 +124,72 @@ func _build() -> void:
 	_status.text = "WORLD SERVICE // READY"
 	_status.modulate = Color(0.68, 0.74, 0.65)
 	background.add_child(_status)
+
+	_control_mode_button = Button.new()
+	_control_mode_button.text = "CONTROL // %s" % InputProfile.resolved_mode().to_upper()
+	_control_mode_button.position = Vector2(112, 528)
+	_control_mode_button.size = Vector2(260, 46)
+	_style_button(_control_mode_button, false)
+	_control_mode_button.pressed.connect(_show_control_choice)
+	background.add_child(_control_mode_button)
+	_build_control_choice(background)
+
+func _build_control_choice(background: Control) -> void:
+	_control_scrim = ColorRect.new()
+	_control_scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_control_scrim.color = Color(0.008, 0.011, 0.010, 0.86)
+	_control_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_control_scrim.z_index = 29
+	_control_scrim.visible = false
+	background.add_child(_control_scrim)
+	_control_choice = _panel(Vector2(380, 145), Vector2(520, 430))
+	_control_choice.z_index = 30
+	_control_scrim.add_child(_control_choice)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	_control_choice.add_child(box)
+	var eyebrow := Label.new()
+	eyebrow.text = "INPUT PROFILE // FIRST DEPLOYMENT"
+	eyebrow.modulate = Color(0.78, 0.58, 0.34)
+	box.add_child(eyebrow)
+	var heading := Label.new()
+	heading.text = "HOW ARE YOU PLAYING?"
+	heading.add_theme_font_size_override("font_size", 27)
+	box.add_child(heading)
+	var detail := Label.new()
+	detail.text = "Choose once; you can change this later from the title screen or Settings."
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.custom_minimum_size = Vector2(450, 58)
+	box.add_child(detail)
+	var touch := Button.new()
+	touch.text = "MOBILE / TOUCH\nJoystick + action buttons + native camera gestures"
+	_style_button(touch, true)
+	touch.custom_minimum_size = Vector2(450, 76)
+	touch.pressed.connect(_choose_control_mode.bind(InputProfile.MODE_TOUCH))
+	box.add_child(touch)
+	var desktop := Button.new()
+	desktop.text = "DESKTOP\nKeyboard + mouse"
+	_style_button(desktop, false)
+	desktop.custom_minimum_size = Vector2(450, 70)
+	desktop.pressed.connect(_choose_control_mode.bind(InputProfile.MODE_DESKTOP))
+	box.add_child(desktop)
+	var note := Label.new()
+	note.text = "Touch mode: left joystick, USE / STRIKE / RUN, swipe to rotate, pinch to zoom. Landscape is recommended."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.modulate = Color(0.62, 0.70, 0.63)
+	box.add_child(note)
+
+func _show_control_choice() -> void:
+	_control_scrim.visible = true
+
+func _choose_control_mode(mode: String) -> void:
+	InputProfile.set_mode(mode)
+	_control_scrim.visible = false
+	_status.text = "CONTROL PROFILE // %s" % mode.to_upper()
+
+func _on_control_mode_changed(mode: String) -> void:
+	if _control_mode_button != null:
+		_control_mode_button.text = "CONTROL // %s" % mode.to_upper()
 
 func _build_auth_panel() -> void:
 	var box := VBoxContainer.new()

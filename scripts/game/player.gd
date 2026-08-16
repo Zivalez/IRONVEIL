@@ -21,7 +21,8 @@ func _process(delta: float) -> void:
 	_animation_time += delta
 	var moving: bool = Vector2(velocity.x, velocity.z).length() > 0.2
 	var reduced: bool = bool(SettingsManager.get_value("accessibility", "reduced_motion", false))
-	var bob: float = 0.0 if reduced or not moving else absf(sin(_animation_time * (13.0 if Input.is_action_pressed("sprint") else 9.0))) * 0.07
+	var sprinting: bool = Input.is_action_pressed("sprint") or InputProfile.sprint_held
+	var bob: float = 0.0 if reduced or not moving else absf(sin(_animation_time * (13.0 if sprinting else 9.0))) * 0.07
 	_sprite.position.y = 0.95 + bob
 	if absf(velocity.x) > 0.1:
 		_sprite.flip_h = velocity.x < 0.0
@@ -49,6 +50,9 @@ func _build_visual() -> void:
 func _on_simulation_tick(delta: float) -> void:
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
 	var input: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if InputProfile.is_touch_mode():
+		input = InputProfile.movement_vector
+		_consume_touch_actions()
 	var world_dir: Vector3 = Vector3(input.x, 0.0, input.y)
 	if camera_rig != null and camera_rig.has_method("transform_input"):
 		world_dir = camera_rig.transform_input(input).normalized()
@@ -59,7 +63,7 @@ func _on_simulation_tick(delta: float) -> void:
 	var fatigue_factor: float = clampf(1.0 - fatigue / 160.0, 0.55, 1.0)
 	if hunger < 15.0 or thirst < 15.0:
 		fatigue_factor *= 0.68
-	var wants_sprint: bool = Input.is_action_pressed("sprint") and world_dir.length() > 0.1 and hunger > 20.0
+	var wants_sprint: bool = (Input.is_action_pressed("sprint") or InputProfile.sprint_held) and world_dir.length() > 0.1 and hunger > 20.0
 	var can_sprint: bool = wants_sprint and float(GameState.survival.get("stamina", 0.0)) > 4.0
 	var speed: float = sprint_speed if can_sprint else move_speed
 	if can_sprint:
@@ -84,6 +88,19 @@ func _on_simulation_tick(delta: float) -> void:
 	if _network_accumulator >= 0.10:
 		_network_accumulator = 0.0
 		NetworkManager.submit_local_player_state(global_position, rotation.y)
+
+func _consume_touch_actions() -> void:
+	if InputProfile.consume_action("interact"):
+		_interact()
+	if InputProfile.consume_action("attack"):
+		_attack()
+	if InputProfile.consume_action("eat_quick"):
+		if not GameState.consume_food("field_tuber"):
+			if not GameState.consume_food("wild_berries"):
+				GameState.consume_food("spring_water")
+	if InputProfile.consume_action("medical_quick"):
+		if not GameState.use_medical("bandage"):
+			GameState.use_medical("salve")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):

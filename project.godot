@@ -2,7 +2,7 @@ config_version=5
 
 [application]
 config/name="IRONVEIL"
-config/version="1.0.2"
+config/version="1.1.0"
 config/icon="res://assets/branding/ironveil_icon.png"
 run/main_scene="res://scenes/boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
@@ -18,6 +18,7 @@ TickManager="*res://scripts/core/tick_manager.gd"
 InfrastructureNetwork="*res://scripts/core/infrastructure_network.gd"
 ChunkManager="*res://scripts/core/chunk_manager.gd"
 SettingsManager="*res://scripts/core/settings_manager.gd"
+InputProfile="*res://scripts/core/input_profile.gd"
 AccountManager="*res://scripts/core/account_manager.gd"
 NetworkManager="*res://scripts/core/network_manager.gd"
 GameState="*res://scripts/core/game_state.gd"
@@ -30,6 +31,11 @@ window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
+window/handheld/orientation=4
+
+[input_devices]
+pointing/emulate_mouse_from_touch=true
+pointing/emulate_touch_from_mouse=true
 
 [rendering]
 textures/default_filters/use_nearest_mipmap_filter=true

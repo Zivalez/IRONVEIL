@@ -11,6 +11,7 @@ var camera: Camera3D
 var _last_occluder: Node = null
 
 func _ready() -> void:
+	add_to_group("camera_rig")
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = float(SettingsManager.get_value("graphics", "camera_zoom", 18.0))
@@ -44,9 +45,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
 		if mouse_event.pressed:
 			if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				camera.size = maxf(10.0, camera.size - 1.0)
+				adjust_zoom(-1.0)
 			elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				camera.size = minf(28.0, camera.size + 1.0)
+				adjust_zoom(1.0)
+
+func rotate_step(direction: int) -> void:
+	if bool(SettingsManager.get_value("gameplay", "camera_rotation", true)):
+		target_yaw += deg_to_rad(90.0) * clampi(direction, -1, 1)
+
+func adjust_zoom(delta: float) -> void:
+	if camera != null:
+		camera.size = clampf(camera.size + delta, 10.0, 28.0)
 
 func transform_input(input: Vector2) -> Vector3:
 	return Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
