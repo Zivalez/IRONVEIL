@@ -52,7 +52,7 @@ func _apply_state() -> void:
 func get_prompt(_player: Node) -> String:
 	if bool(GameState.get_flag("bridge_repaired", false)):
 		return "Ashwick East Bridge // repaired"
-	return "[%s] Repair bridge — %d Planks required (%d carried)" % [SettingsManager.keybind_name("interact"), PLANK_COST, int(GameState.inventory.get("plank", 0))]
+	return "[%s] Repair bridge // %d Planks required (%d carried)" % [SettingsManager.keybind_name("interact"), PLANK_COST, int(GameState.inventory.get("plank", 0))]
 
 func interact(_player: Node) -> void:
 	if bool(GameState.get_flag("bridge_repaired", false)):

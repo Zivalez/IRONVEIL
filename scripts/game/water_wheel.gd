@@ -46,7 +46,7 @@ func _build_visual() -> void:
 
 func get_prompt(_player: Node) -> String:
 	if not repaired:
-		return "[%s] Repair Water Wheel — requires Scrap x2" % SettingsManager.keybind_name("interact")
+		return "[%s] Repair Water Wheel // Scrap x2" % SettingsManager.keybind_name("interact")
 	var rpm: float = GameState.mechanical_network.get_rpm(NODE_ID)
 	var torque: float = GameState.mechanical_network.get_torque(NODE_ID)
 	return "Water Wheel ONLINE | %.0f RPM | %.0f Nm" % [rpm, torque]

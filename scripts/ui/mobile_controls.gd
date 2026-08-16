@@ -11,6 +11,7 @@ var _rotate_notice: PanelContainer
 var _gesture_fingers: Dictionary = {}
 var _gesture_start: Dictionary = {}
 var _last_pinch_distance: float = 0.0
+var _modal_open: bool = false
 
 func configure(player_value: Node, camera_value: Node, hud_value: CanvasLayer) -> void:
 	player = player_value
@@ -22,6 +23,8 @@ func _ready() -> void:
 	_build_ui()
 	get_viewport().size_changed.connect(_apply_layout)
 	InputProfile.mode_changed.connect(_on_mode_changed)
+	if hud != null and hud.has_signal("modal_state_changed"):
+		hud.modal_state_changed.connect(_on_modal_state_changed)
 	_on_mode_changed(InputProfile.resolved_mode())
 
 func _build_ui() -> void:
@@ -150,8 +153,13 @@ func _apply_layout() -> void:
 		return
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var portrait: bool = viewport_size.y > viewport_size.x * 1.05
-	_controls_root.visible = not portrait
+	_controls_root.visible = not portrait and not _modal_open
 	_rotate_notice.visible = portrait and visible
+
+func _on_modal_state_changed(open: bool) -> void:
+	_modal_open = open
+	InputProfile.clear_touch_state()
+	_apply_layout()
 
 func _action_button(text_value: String, position_value: Vector2, size_value: Vector2, primary: bool) -> Button:
 	var button := Button.new()

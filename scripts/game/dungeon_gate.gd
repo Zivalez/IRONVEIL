@@ -47,7 +47,7 @@ func _apply_state() -> void:
 func get_prompt(_player: Node) -> String:
 	if bool(GameState.get_flag("foundry_gate_open", false)):
 		return "Foundry Vault // gate unlocked"
-	return "[%s] Repair gate drive — 2 Pressed Plates + 4 Planks" % SettingsManager.keybind_name("interact")
+	return "[%s] Repair gate drive // 2 Pressed Plates + 4 Planks" % SettingsManager.keybind_name("interact")
 
 func interact(_player: Node) -> void:
 	if bool(GameState.get_flag("foundry_gate_open", false)):

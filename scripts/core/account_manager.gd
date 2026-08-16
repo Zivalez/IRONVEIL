@@ -5,6 +5,7 @@ signal worlds_updated(worlds: Array)
 signal world_loaded(world: Dictionary, snapshot: Dictionary)
 signal request_failed(message: String)
 signal checkpoint_saved(world: Dictionary)
+signal service_status_changed(online: bool, detail: String)
 
 const SESSION_PATH := "user://ironveil_session.json"
 const DEFAULT_LOBBY_URL := "https://ironveil.zvlz.dev/api"
@@ -16,20 +17,41 @@ var active_world_id: String = ""
 var active_world: Dictionary = {}
 var pending_snapshot: Dictionary = {}
 var _request: HTTPRequest
+var _probe_request: HTTPRequest
 var _operation: String = ""
 
 func _ready() -> void:
 	_request = HTTPRequest.new()
 	add_child(_request)
 	_request.request_completed.connect(_on_request_completed)
+	_probe_request = HTTPRequest.new()
+	add_child(_probe_request)
+	_probe_request.request_completed.connect(_on_probe_completed)
 	_load_session()
 
 func is_authenticated() -> bool:
 	return not session_token.is_empty() and not account.is_empty()
 
 func api_url(path: String) -> String:
-	var base: String = str(SettingsManager.get_value("network", "lobby_url", DEFAULT_LOBBY_URL)).trim_suffix("/")
+	var base: String = _effective_base_url()
 	return base + path
+
+func _effective_base_url() -> String:
+	# Web builds always use their current browser origin. This prevents an old
+	# settings file from sending requests to localhost or a retired API domain.
+	if OS.has_feature("web"):
+		var origin_value: Variant = JavaScriptBridge.eval("window.location.origin", true)
+		var origin: String = str(origin_value).strip_edges().trim_suffix("/")
+		if origin.begins_with("http://") or origin.begins_with("https://"):
+			return origin + "/api"
+	return str(SettingsManager.get_value("network", "lobby_url", DEFAULT_LOBBY_URL)).strip_edges().trim_suffix("/")
+
+func probe_service() -> void:
+	if _probe_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		return
+	var error: Error = _probe_request.request(api_url("/health"), PackedStringArray(["Accept: application/json"]), HTTPClient.METHOD_GET)
+	if error != OK:
+		service_status_changed.emit(false, "Request could not start: %s" % error_string(error))
 
 func register_account(nickname: String, password: String) -> void:
 	_send("register", HTTPClient.METHOD_POST, "/auth/register", {"nickname": nickname, "password": password}, false)
@@ -97,7 +119,7 @@ func _send(operation: String, method: HTTPClient.Method, path: String, payload: 
 	var error: Error = _request.request(api_url(path), headers, method, body)
 	if error != OK:
 		_operation = ""
-		request_failed.emit("Could not reach the IRONVEIL world service.")
+		request_failed.emit("Browser request could not start (%s)." % error_string(error))
 
 func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	var operation: String = _operation
@@ -107,7 +129,10 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
 		if response_code == 401:
 			_clear_session()
-		request_failed.emit(str(response.get("message", "World service request failed (%d)." % response_code)))
+		var fallback: String = "World service request failed (HTTP %d, result %d)." % [response_code, result]
+		if response_code == 0:
+			fallback = "Browser could not reach %s (network result %d)." % [api_url(""), result]
+		request_failed.emit(str(response.get("message", fallback)))
 		return
 	match operation:
 		"register", "login", "refresh":
@@ -140,6 +165,15 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			checkpoint_saved.emit(response.duplicate(true))
 		"invite":
 			GameState.notify("Shared-world invite: %s" % str(response.get("invite_code", "")), "success")
+
+func _on_probe_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	var response: Dictionary = parsed as Dictionary if parsed is Dictionary else {}
+	var online: bool = result == HTTPRequest.RESULT_SUCCESS and response_code == 200 and bool(response.get("ok", false))
+	if online:
+		service_status_changed.emit(true, "Connected through %s" % api_url(""))
+	else:
+		service_status_changed.emit(false, "HTTP %d, network result %d, URL %s" % [response_code, result, api_url("/health")])
 
 func _save_session() -> void:
 	var file: FileAccess = FileAccess.open(SESSION_PATH, FileAccess.WRITE)

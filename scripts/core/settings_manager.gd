@@ -122,7 +122,7 @@ func load_settings() -> void:
 
 func _migrate_network_url() -> void:
 	var current: String = str(get_value("network", "lobby_url", "")).strip_edges()
-	if current.is_empty() or current.contains("127.0.0.1") or current.contains("localhost"):
+	if OS.has_feature("web") or current.is_empty() or current.contains("127.0.0.1") or current.contains("localhost"):
 		settings["network"]["lobby_url"] = DEFAULT_LOBBY_URL
 		save_settings()
 

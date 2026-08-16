@@ -2,7 +2,7 @@
 
 **IRONVEIL** is a 2.5D isometric survival/engineering RPG built with Godot 4.x. Progression is knowledge-driven: observe systems, understand them, build working infrastructure, then automate it.
 
-> **Current repository phase:** **Phase 4 — full-route production candidate (1.0.0 source)**.  
+> **Current repository phase:** **Phase 4 full-route production candidate (1.2.0 source)**.
 > The source now implements account/world entry, server persistence, stable shared worlds, six core regions, late technology, and all three Veil endings. Runtime/deployment debt remains tracked in `PROJECT_STATE.md` and is not marked passed by static inspection.
 
 ## Full Game Route

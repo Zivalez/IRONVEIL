@@ -1,4 +1,4 @@
-# Dokploy redeploy verification — IRONVEIL 1.1.0
+# Dokploy redeploy verification - IRONVEIL 1.1.1
 
 The repository must be deployed as a **Docker Compose** project, not as a
 single Dockerfile application. Use branch `main`, repository root `/`, and
@@ -28,6 +28,6 @@ GET https://ironveil.zvlz.dev/build-info
 GET https://ironveil.zvlz.dev/api/health
 ```
 
-The first endpoint must report build `1.1.0` and input `desktop-touch`. The
+The first endpoint must report build `1.1.1` and input `desktop-touch`. The
 second must return an `ok: true` JSON object. If either URL serves the game
 HTML/canvas, the running client container still uses an old nginx image.

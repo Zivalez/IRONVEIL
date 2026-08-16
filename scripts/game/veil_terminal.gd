@@ -42,7 +42,7 @@ func interact(_player: Node) -> void:
 	GameState.set_flag("game_complete", true)
 	GameState.advance_objective(32)
 	GameState.add_journal("The Veil: %s" % ending_name, "Confirmation", _ending_text())
-	GameState.notify("ENDING // %s — your infrastructure made this choice possible." % ending_name, "success")
+	GameState.notify("ENDING // %s" % ending_name, "success")
 
 func _ending_text() -> String:
 	match ending_id:

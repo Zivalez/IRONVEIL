@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 1.2.0-source - World gateway UI and same-origin service repair
+
+- Rebuilt the title screen as a layered field-network dashboard with stronger hierarchy, richer industrial styling, and live service status.
+- Split the signed-in flow into MY WORLDS, CREATE WORLD, and JOIN BY CODE tabs.
+- Replaced separate personal/shared creation buttons with one world-type selector and one CREATE WORLD action.
+- Added selected-world details and a single ENTER WORLD action.
+- Forced Web API requests to use the current browser origin plus `/api`, ignoring stale localhost or retired-domain settings.
+- Added an independent service health probe and diagnostic HTTP/network errors instead of the generic world-service message.
+- Kept account access nickname-and-password only. No email is requested or stored.
+
+## 1.1.1-source - Camera, void recovery, and UI text repair
+
+- Corrected the isometric camera target from world origin to the live player rig and removed movement look-ahead.
+- Added immediate camera snapping after recovery and fatal recovery when the player falls below or leaves the playable world bounds.
+- Removed verbose helper copy from account, control-choice, help, inventory, and infrastructure surfaces.
+- Replaced every non-ASCII character in runtime scripts, including em dash, arrows, bullets, multiplication, and degree glyphs.
+- Rebuilt the Field Manual as a compact control reference without route or crafting essays.
+- Added static regression checks for ASCII-only runtime text, player-centered camera, and void recovery.
+
 ## 1.1.0-source — Adaptive desktop/mobile Web controls
 
 - Added first-run input selection for detected touch/mobile visitors, with a persistent desktop override.

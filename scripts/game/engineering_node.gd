@@ -68,7 +68,7 @@ func get_prompt(_player: Node) -> String:
 	if not _built:
 		if not prerequisite_flag.is_empty() and not bool(GameState.get_flag(prerequisite_flag, false)):
 			return "[%s] %s // prerequisite offline" % [SettingsManager.keybind_name("interact"), display_name]
-		return "[%s] Rebuild %s — %s" % [SettingsManager.keybind_name("interact"), display_name, _requirements_text()]
+		return "[%s] Rebuild %s // %s" % [SettingsManager.keybind_name("interact"), display_name, _requirements_text()]
 	if electrical_output_kw > 0.0 or electrical_load_kw > 0.0:
 		return "[%s] %s // %s // toggle" % [SettingsManager.keybind_name("interact"), display_name, "ONLINE" if _active else "ISOLATED"]
 	return "[%s] Inspect %s" % [SettingsManager.keybind_name("interact"), display_name]

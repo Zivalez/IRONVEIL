@@ -60,7 +60,7 @@ func _build_visual() -> void:
 
 func get_prompt(_player: Node) -> String:
 	if not connected:
-		return "[%s] Install Crude Gear — craft with [%s] using Scrap x2" % [SettingsManager.keybind_name("interact"), SettingsManager.keybind_name("craft_gear")]
+		return "[%s] Install Crude Gear // craft [%s] // Scrap x2" % [SettingsManager.keybind_name("interact"), SettingsManager.keybind_name("craft_gear")]
 	return "Gearbox CONNECTED | %.0f RPM | %.0f Nm" % [
 		GameState.mechanical_network.get_rpm(GEAR_ID),
 		GameState.mechanical_network.get_torque(GEAR_ID)

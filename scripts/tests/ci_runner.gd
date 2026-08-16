@@ -240,6 +240,18 @@ func _test_boot_scene_runtime() -> void:
 		_fail("Runtime smoke test did not create a player.")
 	if get_viewport().get_camera_3d() == null:
 		_fail("Runtime smoke test did not create an active Camera3D.")
+	if not get_tree().get_nodes_in_group("players").is_empty() and get_viewport().get_camera_3d() != null:
+		var runtime_player: Node3D = get_tree().get_nodes_in_group("players")[0] as Node3D
+		var runtime_camera: Camera3D = get_viewport().get_camera_3d()
+		var camera_forward: Vector3 = -runtime_camera.global_transform.basis.z.normalized()
+		var player_direction: Vector3 = (runtime_player.global_position + Vector3.UP * 0.8 - runtime_camera.global_position).normalized()
+		if camera_forward.dot(player_direction) < 0.98:
+			_fail("Runtime camera is not centered on the player.")
+		if runtime_player.has_method("_on_simulation_tick"):
+			runtime_player.global_position.y = -20.0
+			runtime_player.call("_on_simulation_tick", 0.1)
+			if runtime_player.global_position.y < -1.0:
+				_fail("Player void recovery did not return the player to the field.")
 	if get_tree().get_nodes_in_group("boss").is_empty():
 		_fail("Phase-2 runtime smoke test did not create the Furnace Saint boss.")
 	if get_tree().get_nodes_in_group("thermal_valve").size() < 2:

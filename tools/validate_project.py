@@ -94,6 +94,13 @@ def check_required() -> None:
     if missing:
         fail("Missing required files: " + ", ".join(missing))
 
+    # Runtime UI uses the engine default font. Keep player-facing source text
+    # ASCII-only so unsupported punctuation cannot render as missing glyphs.
+    for script_path in (ROOT / "scripts").rglob("*.gd"):
+        text = script_path.read_text(encoding="utf-8")
+        if any(ord(character) > 127 for character in text):
+            fail(f"Runtime script contains non-ASCII UI text: {script_path.relative_to(ROOT)}")
+
 def load_catalog(name: str) -> dict[str, dict]:
     path = ROOT / "data" / name
     try:
@@ -254,6 +261,13 @@ def check_deploy_contract() -> None:
         fail("Docker must not run project tests via --script; autoload lifecycle would be bypassed")
     if dockerfile.index("ci_runner.tscn") > dockerfile.index("--export-release"):
         fail("Scene-based CI gate must run before Web export")
+
+    camera = (ROOT / "scripts/game/camera_rig.gd").read_text(encoding="utf-8")
+    if "camera.look_at(Vector3.ZERO" in camera or "look_ahead_seconds: float = 0.0" not in camera:
+        fail("Camera must stay centered on the player rig")
+    player = (ROOT / "scripts/game/player.gd").read_text(encoding="utf-8")
+    if "_outside_playable_world" not in player or "_recover_from_void" not in player:
+        fail("Player void/out-of-bounds recovery is missing")
 
 def strip_strings_and_comments(text: str) -> str:
     out = []
@@ -532,7 +546,7 @@ def check_phase4_contract() -> None:
             fail(f"Phase 4 authoritative shared state missing: {term}")
 
     title = (ROOT / "scripts/ui/title_screen.gd").read_text(encoding="utf-8")
-    for term in ("ACCOUNT ACCESS", "PERSISTENT WORLDS", "NEW PERSONAL", "NEW SHARED", "JOIN SHARED WORLD"):
+    for term in ("ACCOUNT GATEWAY", "WORLD ARCHIVE", "MY WORLDS", "CREATE WORLD", "JOIN BY CODE"):
         if term not in title:
             fail(f"Phase 4 product entry flow missing: {term}")
 

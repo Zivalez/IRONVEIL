@@ -15,6 +15,11 @@ var _sprite: Sprite3D
 var _sprint_stamina_accumulator: float = 0.0
 var _animation_time: float = 0.0
 
+const VOID_Y := -7.0
+const WORLD_MIN_X := -20.0
+const WORLD_MAX_X := 380.0
+const WORLD_Z_LIMIT := 25.0
+
 func _process(delta: float) -> void:
 	if _sprite == null:
 		return
@@ -83,11 +88,23 @@ func _on_simulation_tick(delta: float) -> void:
 	else:
 		velocity.y = -0.1
 	move_and_slide()
+	if _outside_playable_world():
+		_recover_from_void()
+		return
 	_update_prompt()
 	_network_accumulator += delta
 	if _network_accumulator >= 0.10:
 		_network_accumulator = 0.0
 		NetworkManager.submit_local_player_state(global_position, rotation.y)
+
+func _outside_playable_world() -> bool:
+	return global_position.y < VOID_Y or global_position.x < WORLD_MIN_X or global_position.x > WORLD_MAX_X or absf(global_position.z) > WORLD_Z_LIMIT
+
+func _recover_from_void() -> void:
+	velocity = Vector3.ZERO
+	apply_damage(999.0)
+	if camera_rig != null and camera_rig.has_method("snap_to_target"):
+		camera_rig.snap_to_target()
 
 func _consume_touch_actions() -> void:
 	if InputProfile.consume_action("interact"):

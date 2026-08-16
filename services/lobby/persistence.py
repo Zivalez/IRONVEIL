@@ -129,9 +129,9 @@ class PersistenceStore:
         normalized = display_nickname.lower()
         raw_password = str(password or "")
         if not NICKNAME_RE.fullmatch(display_nickname):
-            raise StoreError("Nickname must be 3–24 characters using letters, numbers, dot, dash, or underscore.")
+            raise StoreError("Nickname must be 3-24 characters using letters, numbers, dot, dash, or underscore.")
         if len(raw_password) < 10 or len(raw_password) > 128:
-            raise StoreError("Password must contain 10–128 characters.")
+            raise StoreError("Password must contain 10-128 characters.")
         with self.lock:
             if any(str(item.get("nickname", "")).lower() == normalized for item in self.accounts.values()):
                 raise StoreError("That nickname is already in use.")

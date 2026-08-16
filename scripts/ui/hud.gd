@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+signal modal_state_changed(open: bool)
+
 var status_label: Label
 var objective_label: Label
 var inventory_label: Label
@@ -23,6 +25,7 @@ var field_character_text: RichTextLabel
 var _root_control: Control
 var _status_panel: PanelContainer
 var _inventory_panel: PanelContainer
+var _modal_scrim: ColorRect
 
 var room_list: ItemList
 var room_name_edit: LineEdit
@@ -93,11 +96,22 @@ func _build_ui() -> void:
 	_build_boss_panel(_root_control)
 	_build_prompt(_root_control)
 	_build_notification(_root_control)
+	_build_modal_scrim(_root_control)
 	_build_journal(_root_control)
 	_build_field_console(_root_control)
 	_build_settings(_root_control)
 	_build_lobby(_root_control)
 	_build_help(_root_control)
+	_sync_modal_state()
+
+func _build_modal_scrim(root: Control) -> void:
+	_modal_scrim = ColorRect.new()
+	_modal_scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_modal_scrim.color = Color(0.008, 0.011, 0.010, 0.82)
+	_modal_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_modal_scrim.z_index = 1
+	_modal_scrim.visible = false
+	root.add_child(_modal_scrim)
 
 func _build_status_panel(root: Control) -> void:
 	_status_panel = _panel(Vector2(18, 18), Vector2(420, 150), false)
@@ -129,7 +143,7 @@ func _build_field_console(root: Control) -> void:
 	var box := VBoxContainer.new()
 	field_panel.add_child(box)
 	var heading := Label.new()
-	heading.text = "FIELD ENGINEERING CONSOLE // CHARACTER • INVENTORY • PRODUCTION • NETWORK"
+	heading.text = "FIELD ENGINEERING CONSOLE // CHARACTER | INVENTORY | PRODUCTION | NETWORK"
 	heading.add_theme_font_size_override("font_size", 20)
 	box.add_child(heading)
 	var tabs := TabContainer.new()
@@ -341,7 +355,7 @@ func _build_network_settings_tab(tabs: TabContainer) -> void:
 	lobby_edit.text_changed.connect(_on_lobby_url_changed)
 	var note := Label.new()
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.text = "Public HTTPS deployment requires an HTTPS lobby URL and WSS room endpoint. The lobby validates room passwords server-side and enforces 4 players per room."
+	note.text = "MAX PLAYERS 4 // SECURE ROOM TRANSPORT"
 	box.add_child(note)
 
 func _build_lobby(root: Control) -> void:
@@ -408,22 +422,22 @@ func _build_lobby(root: Control) -> void:
 	box.add_child(close)
 
 func _build_help(root: Control) -> void:
-	help_panel = _modal_panel(Vector2(700, 460))
+	help_panel = _modal_panel(Vector2(620, 420))
+	help_panel.visible = false
 	root.add_child(help_panel)
 	var box := VBoxContainer.new()
 	help_panel.add_child(box)
 	var title := Label.new()
-	title.text = "IRONVEIL 1.0 // SIX-REGION FIELD MANUAL"
+	title.text = "IRONVEIL // FIELD MANUAL"
 	title.add_theme_font_size_override("font_size", 20)
 	box.add_child(title)
-	var help := Label.new()
-	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	help.custom_minimum_size = Vector2(650, 340)
-	var help_text: String = "Move %s/%s/%s/%s  • Sprint %s  • Interact %s  • Attack %s" % [SettingsManager.keybind_name("move_up"), SettingsManager.keybind_name("move_left"), SettingsManager.keybind_name("move_down"), SettingsManager.keybind_name("move_right"), SettingsManager.keybind_name("sprint"), SettingsManager.keybind_name("interact"), SettingsManager.keybind_name("attack")]
-	help_text += "\nRotate camera %s/%s  • Field Console %s  • Journal %s  • Lobby %s  • Settings %s" % [SettingsManager.keybind_name("camera_left"), SettingsManager.keybind_name("camera_right"), SettingsManager.keybind_name("inventory"), SettingsManager.keybind_name("journal"), SettingsManager.keybind_name("lobby"), SettingsManager.keybind_name("settings")]
-	help_text += "\nConsume %s  • Medical %s  • Gear %s  • Bandage %s  • Save/Load %s/%s" % [SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("medical_quick"), SettingsManager.keybind_name("craft_gear"), SettingsManager.keybind_name("craft_bandage"), SettingsManager.keybind_name("save"), SettingsManager.keybind_name("load")]
-	help_text += "\n\nFull route: Green Hollow/Ashwick → Furnace Saint → Ashlands industry → Flooded Basin irrigation → Iron Mountains → Frostline steam/grid → The Deep rail → Veil Nexus ending."
-	help_text += "\n\nCraft tiers: handcraft in the field, workshop at a bench, industrial only while a live mechanical network supplies enough RPM and torque."
+	var help := RichTextLabel.new()
+	help.bbcode_enabled = true
+	help.custom_minimum_size = Vector2(570, 300)
+	var help_text: String = "[b]MOVEMENT[/b]\n%s %s %s %s   Move\n%s   Sprint\n\n" % [SettingsManager.keybind_name("move_up"), SettingsManager.keybind_name("move_left"), SettingsManager.keybind_name("move_down"), SettingsManager.keybind_name("move_right"), SettingsManager.keybind_name("sprint")]
+	help_text += "[b]FIELD ACTIONS[/b]\n%s   Interact\n%s   Attack\n%s   Food\n%s   Medical\n\n" % [SettingsManager.keybind_name("interact"), SettingsManager.keybind_name("attack"), SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("medical_quick")]
+	help_text += "[b]PANELS[/b]\n%s   Pack\n%s   Journal\n%s   Room\n%s   Settings\n\n" % [SettingsManager.keybind_name("inventory"), SettingsManager.keybind_name("journal"), SettingsManager.keybind_name("lobby"), SettingsManager.keybind_name("settings")]
+	help_text += "[b]CAMERA[/b]\n%s / %s   Rotate\nMouse wheel or pinch   Zoom" % [SettingsManager.keybind_name("camera_left"), SettingsManager.keybind_name("camera_right")]
 	help.text = help_text
 	box.add_child(help)
 	var dismiss := Button.new()
@@ -495,6 +509,7 @@ func _modal_panel(panel_size: Vector2) -> PanelContainer:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.position = -panel_size / 2.0
 	panel.size = panel_size
+	panel.z_index = 2
 	panel.add_theme_stylebox_override("panel", _panel_style(true))
 	return panel
 
@@ -516,27 +531,45 @@ func _wire_button(button: BaseButton) -> void:
 	button.button_down.connect(_on_ui_press)
 
 func _toggle_journal() -> void:
-	journal_panel.visible = not journal_panel.visible
+	_set_modal(journal_panel)
 	AudioManager.play_ui("open" if journal_panel.visible else "close")
 
 func _toggle_settings() -> void:
-	settings_panel.visible = not settings_panel.visible
+	_set_modal(settings_panel)
 	AudioManager.play_ui("open" if settings_panel.visible else "close")
 
 func _toggle_help() -> void:
-	help_panel.visible = not help_panel.visible
+	_set_modal(help_panel)
 
 func _toggle_lobby() -> void:
-	lobby_panel.visible = not lobby_panel.visible
+	_set_modal(lobby_panel)
 	if lobby_panel.visible:
 		NetworkManager.list_rooms()
 	AudioManager.play_ui("open" if lobby_panel.visible else "close")
 
 func _toggle_field_panel() -> void:
-	field_panel.visible = not field_panel.visible
+	_set_modal(field_panel)
 	if field_panel.visible:
 		_refresh_field_console()
 	AudioManager.play_ui("open" if field_panel.visible else "close")
+
+func _set_modal(panel: PanelContainer) -> void:
+	var open_next: bool = not panel.visible
+	for candidate in [journal_panel, settings_panel, help_panel, lobby_panel, field_panel]:
+		if candidate != null:
+			(candidate as PanelContainer).visible = false
+	panel.visible = open_next
+	_sync_modal_state()
+
+func _sync_modal_state() -> void:
+	var open: bool = false
+	for panel in [journal_panel, settings_panel, help_panel, lobby_panel, field_panel]:
+		if panel != null and (panel as PanelContainer).visible:
+			open = true
+			break
+	if _modal_scrim != null:
+		_modal_scrim.visible = open
+	modal_state_changed.emit(open)
 
 func mobile_toggle(section: String) -> void:
 	match section:
@@ -551,12 +584,15 @@ func mobile_toggle(section: String) -> void:
 
 func _on_journal_close_pressed() -> void:
 	journal_panel.visible = false
+	_sync_modal_state()
 
 func _on_settings_close_pressed() -> void:
 	settings_panel.visible = false
+	_sync_modal_state()
 
 func _on_help_close_pressed() -> void:
 	help_panel.visible = false
+	_sync_modal_state()
 
 func _on_notification_timeout() -> void:
 	notification_label.visible = false
@@ -664,7 +700,7 @@ func _update_inventory(inventory: Dictionary) -> void:
 	for quantity_value in inventory.values():
 		total_items += int(quantity_value)
 	var lines: Array[String] = ["FIELD PACK // %d UNITS" % total_items]
-	lines.append("Quick: %s food • %s medical" % [SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("medical_quick")])
+	lines.append("Quick: %s food | %s medical" % [SettingsManager.keybind_name("eat_quick"), SettingsManager.keybind_name("medical_quick")])
 	lines.append("[%s] Full field console" % SettingsManager.keybind_name("inventory"))
 	inventory_label.text = "\n".join(lines)
 	_refresh_field_console()
@@ -680,18 +716,18 @@ func _refresh_field_console() -> void:
 		var category: String = str(definition.get("category", "misc"))
 		if not categories.has(category):
 			categories[category] = []
-		(categories[category] as Array).append("%s × %d" % [str(definition.get("name", item_id)), int(GameState.inventory[item_value])])
+		(categories[category] as Array).append("%s x %d" % [str(definition.get("name", item_id)), int(GameState.inventory[item_value])])
 		total_units += int(GameState.inventory[item_value])
-	var inventory_body: String = "[b]LOAD[/b]  %d units\n[color=#9eaa95]Items are grouped by field purpose. Shared containers resolve transactions on the room server.[/color]\n\n" % total_units
+	var inventory_body: String = "[b]LOAD[/b]  %d units\n\n" % total_units
 	var category_ids: Array = categories.keys()
 	category_ids.sort()
 	for category_value in category_ids:
-		inventory_body += "[color=#c48a43][b]%s[/b][/color]\n%s\n\n" % [str(category_value).to_upper(), "  •  ".join(categories[category_value])]
+		inventory_body += "[color=#c48a43][b]%s[/b][/color]\n%s\n\n" % [str(category_value).to_upper(), "  |  ".join(categories[category_value])]
 	if GameState.inventory.is_empty():
 		inventory_body += "[i]Field pack is empty.[/i]"
 	field_inventory_text.text = inventory_body
 
-	var crafting_body := "[b]PRODUCTION TIERS[/b]  HANDCRAFT → WORKSHOP → INDUSTRIAL\n[color=#9eaa95]A recipe becomes actionable only when its material and station requirements are met.[/color]\n\n"
+	var crafting_body := "[b]PRODUCTION TIERS[/b]  HANDCRAFT > WORKSHOP > INDUSTRIAL\n\n"
 	for recipe_value in DataRegistry.recipes.values():
 		if not (recipe_value is Dictionary):
 			continue
@@ -714,7 +750,7 @@ func _refresh_field_console() -> void:
 		for injury_value in GameState.injuries.keys():
 			injury_names.append(str(injury_value).replace("_", " "))
 		injuries_text = ", ".join(injury_names)
-	field_character_text.text = "[b]CHARACTER STATUS[/b]\n\nRegion  %s\nHealth  %.0f / %.0f\nStamina  %.0f / %.0f\nBody temperature  %.1f°C\nFatigue  %.0f%%\nStress / Morale  %.0f / %.0f\nInfection risk  %.0f%%\nInjuries  %s\n\n[color=#9eaa95]Knowledge and confirmed journal discoveries survive death.[/color]" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)),float(GameState.survival.get("health",0.0)),float(GameState.survival.get("max_health",100.0)),float(GameState.survival.get("stamina",0.0)),float(GameState.survival.get("max_stamina",100.0)),float(GameState.survival.get("body_temperature",36.8)),float(GameState.survival.get("fatigue",0.0)),float(GameState.survival.get("stress",0.0)),float(GameState.survival.get("morale",0.0)),float(GameState.survival.get("infection_risk",0.0)),injuries_text]
+	field_character_text.text = "[b]CHARACTER STATUS[/b]\n\nRegion  %s\nHealth  %.0f / %.0f\nStamina  %.0f / %.0f\nBody temperature  %.1f C\nFatigue  %.0f%%\nStress / Morale  %.0f / %.0f\nInfection risk  %.0f%%\nInjuries  %s" % [str(DataRegistry.get_biome(GameState.current_region_id).get("name", GameState.current_region_id)),float(GameState.survival.get("health",0.0)),float(GameState.survival.get("max_health",100.0)),float(GameState.survival.get("stamina",0.0)),float(GameState.survival.get("max_stamina",100.0)),float(GameState.survival.get("body_temperature",36.8)),float(GameState.survival.get("fatigue",0.0)),float(GameState.survival.get("stress",0.0)),float(GameState.survival.get("morale",0.0)),float(GameState.survival.get("infection_risk",0.0)),injuries_text]
 	_on_infrastructure_changed(InfrastructureNetwork.snapshot())
 
 func _on_infrastructure_changed(state: Dictionary) -> void:
@@ -735,7 +771,7 @@ func _on_infrastructure_changed(state: Dictionary) -> void:
 			demand += float((consumer_value as Dictionary).get("load_kw", 0.0))
 			if bool((consumer_value as Dictionary).get("powered", false)):
 				powered += 1
-	field_machine_text.text = "[b]REGIONAL INFRASTRUCTURE[/b]\n\nGeneration  %.1f kW\nDemand  %.1f kW\nPowered consumers  %d / %d\nStorage  %.2f / %.2f kWh\nSteam pressure  %.0f kPa\nPollution load  %.1f%%\n\n[color=#c48a43]MECHANICAL NETWORK[/color]\nThe visible water, wind, gear, belt, saw, press, pump, and hammer chain remains simulated through RPM, torque, efficiency, and load.\n\n[color=#9eaa95]Electrical consumers are priority-shed when generation and stored energy cannot meet demand.[/color]" % [generation,demand,powered,consumers.size(),float(state.get("storage_kwh",0.0)),float(state.get("storage_capacity_kwh",0.0)),float(state.get("steam_pressure_kpa",0.0)),float(state.get("pollution",0.0))]
+	field_machine_text.text = "[b]REGIONAL INFRASTRUCTURE[/b]\n\nGeneration  %.1f kW\nDemand  %.1f kW\nPowered  %d / %d\nStorage  %.2f / %.2f kWh\nSteam  %.0f kPa\nPollution  %.1f%%\n\n[b]MECHANICAL NETWORK[/b]\nRPM | TORQUE | EFFICIENCY | LOAD" % [generation,demand,powered,consumers.size(),float(state.get("storage_kwh",0.0)),float(state.get("storage_capacity_kwh",0.0)),float(state.get("steam_pressure_kpa",0.0)),float(state.get("pollution",0.0))]
 
 func _update_journal(entries: Array) -> void:
 	var body: String = ""

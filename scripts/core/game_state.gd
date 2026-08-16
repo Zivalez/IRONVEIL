@@ -42,7 +42,7 @@ const OBJECTIVES: Array[String] = [
 	"Open the Foundry Vault gate (2 Plates + 4 Planks).",
 	"Activate both thermal relief valves inside the Foundry.",
 	"Defeat the Furnace Saint while its armor is thermally vulnerable.",
-	"VERTICAL SLICE COMPLETE — Furnace Saint defeated. Cross the eastern cut and survey the Ashlands.",
+	"VERTICAL SLICE COMPLETE // Furnace Saint defeated. Survey the Ashlands.",
 	"Trade with Machinist Harker and recover metallurgy stock.",
 	"Bring the Ashland wind transmission online.",
 	"Use workshop processing to make a Steel Bloom.",
@@ -51,7 +51,7 @@ const OBJECTIVES: Array[String] = [
 	"Restore the basin irrigation pump and connect irrigation pipe.",
 	"Plant, water, and harvest a Field Tuber crop.",
 	"Trade with Grower Nia and stabilize the food-water loop.",
-	"MVP LOOP COMPLETE — three regions now support a connected survival economy.",
+	"MVP LOOP COMPLETE // Three regions connected.",
 	"Cross the northern pass and survey the Iron Mountains.",
 	"Rebuild the mine lift with structural steel and precision components.",
 	"Recover pressure-grade alloy from the high mine.",
@@ -62,7 +62,7 @@ const OBJECTIVES: Array[String] = [
 	"Repair the Deep Rail to reconnect all regional logistics.",
 	"Carry the relay core to the Veil Nexus and assemble the gateway interface.",
 	"Choose the future of The Veil: Restore, Destroy, or Rewrite.",
-	"IRONVEIL COMPLETE — the world now carries the consequence of your understanding.",
+	"IRONVEIL COMPLETE // Final choice recorded.",
 ]
 
 func _ready() -> void:

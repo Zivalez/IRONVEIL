@@ -5,13 +5,15 @@ var yaw: float = deg_to_rad(45.0)
 var target_yaw: float = deg_to_rad(45.0)
 var distance: float = 18.0
 var height: float = 16.0
-var follow_damping: float = 7.5
-var look_ahead_seconds: float = 0.34
+var follow_damping: float = 14.0
+var look_ahead_seconds: float = 0.0
 var camera: Camera3D
 var _last_occluder: Node = null
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	if target != null:
+		global_position = target.global_position
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = float(SettingsManager.get_value("graphics", "camera_zoom", 18.0))
@@ -57,6 +59,11 @@ func adjust_zoom(delta: float) -> void:
 	if camera != null:
 		camera.size = clampf(camera.size + delta, 10.0, 28.0)
 
+func snap_to_target() -> void:
+	if target != null:
+		global_position = target.global_position
+		_update_camera_transform()
+
 func transform_input(input: Vector2) -> Vector3:
 	return Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
 
@@ -65,7 +72,7 @@ func _update_camera_transform() -> void:
 		return
 	var horizontal: Vector3 = Vector3(distance, 0.0, distance).rotated(Vector3.UP, yaw - deg_to_rad(45.0))
 	camera.position = Vector3(horizontal.x, height, horizontal.z)
-	camera.look_at(Vector3.ZERO, Vector3.UP)
+	camera.look_at(global_position + Vector3.UP * 0.8, Vector3.UP)
 
 func _update_occlusion() -> void:
 	if target == null or camera == null or not is_inside_tree():
