@@ -107,44 +107,62 @@ func _build_ui() -> void:
 func _build_modal_scrim(root: Control) -> void:
 	_modal_scrim = ColorRect.new()
 	_modal_scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_modal_scrim.color = Color(0.008, 0.011, 0.010, 0.82)
+	_modal_scrim.color = Color(0.01, 0.015, 0.018, 0.78)
 	_modal_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_modal_scrim.z_index = 1
 	_modal_scrim.visible = false
 	root.add_child(_modal_scrim)
 
 func _build_status_panel(root: Control) -> void:
-	_status_panel = _panel(Vector2(18, 18), Vector2(420, 150), false)
+	_status_panel = _panel(Vector2(16, 14), Vector2(430, 158), false)
 	root.add_child(_status_panel)
 	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
 	_status_panel.add_child(box)
 	var title := Label.new()
-	title.text = "IRONVEIL // FIELD STATE"
-	title.add_theme_font_size_override("font_size", 18)
+	title.text = "◆  FIELD STATE"
+	title.add_theme_font_size_override("font_size", 15)
+	title.add_theme_color_override("font_color", Color(0.95, 0.78, 0.38, 1.0))
 	box.add_child(title)
 	status_label = Label.new()
+	status_label.add_theme_font_size_override("font_size", 14)
+	status_label.add_theme_color_override("font_color", Color(0.90, 0.92, 0.88, 1.0))
 	box.add_child(status_label)
 	objective_label = Label.new()
 	objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	objective_label.custom_minimum_size = Vector2(390, 60)
+	objective_label.custom_minimum_size = Vector2(400, 64)
+	objective_label.add_theme_font_size_override("font_size", 13)
+	objective_label.add_theme_color_override("font_color", Color(0.72, 0.76, 0.70, 1.0))
 	box.add_child(objective_label)
 
 func _build_inventory_panel(root: Control) -> void:
-	_inventory_panel = _panel(Vector2(-288, 18), Vector2(270, 118), true)
+	_inventory_panel = _panel(Vector2(-278, 14), Vector2(262, 124), true)
 	root.add_child(_inventory_panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	_inventory_panel.add_child(box)
+	var title := Label.new()
+	title.text = "◆  PACK"
+	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_color_override("font_color", Color(0.95, 0.78, 0.38, 1.0))
+	box.add_child(title)
 	inventory_label = Label.new()
 	inventory_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_inventory_panel.add_child(inventory_label)
+	inventory_label.add_theme_font_size_override("font_size", 13)
+	inventory_label.add_theme_color_override("font_color", Color(0.88, 0.90, 0.86, 1.0))
+	box.add_child(inventory_label)
 
 func _build_field_console(root: Control) -> void:
 	field_panel = _modal_panel(Vector2(920, 610))
 	field_panel.visible = false
 	root.add_child(field_panel)
 	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
 	field_panel.add_child(box)
 	var heading := Label.new()
-	heading.text = "FIELD ENGINEERING CONSOLE // CHARACTER | INVENTORY | PRODUCTION | NETWORK"
-	heading.add_theme_font_size_override("font_size", 20)
+	heading.text = "◆  FIELD CONSOLE"
+	heading.add_theme_font_size_override("font_size", 18)
+	heading.add_theme_color_override("font_color", Color(0.95, 0.78, 0.38, 1.0))
 	box.add_child(heading)
 	var tabs := TabContainer.new()
 	tabs.custom_minimum_size = Vector2(870, 500)
@@ -193,31 +211,49 @@ func _build_boss_panel(root: Control) -> void:
 func _build_prompt(root: Control) -> void:
 	prompt_label = Label.new()
 	prompt_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	prompt_label.position = Vector2(-330, -90)
-	prompt_label.size = Vector2(660, 48)
+	prompt_label.position = Vector2(-320, -88)
+	prompt_label.size = Vector2(640, 52)
 	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	prompt_label.add_theme_font_size_override("font_size", 18)
+	prompt_label.add_theme_font_size_override("font_size", 17)
+	prompt_label.add_theme_color_override("font_color", Color(0.95, 0.90, 0.75, 1.0))
 	prompt_label.visible = false
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.06, 0.06, 0.90)
-	style.border_color = Color(0.56, 0.44, 0.22, 0.90)
-	style.set_border_width_all(1)
+	style.bg_color = Color(0.055, 0.065, 0.07, 0.94)
+	style.border_color = Color(0.72, 0.55, 0.28, 0.95)
+	style.set_border_width_all(2)
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
+	style.set_content_margin_all(12.0)
 	prompt_label.add_theme_stylebox_override("normal", style)
 	root.add_child(prompt_label)
 
 func _build_notification(root: Control) -> void:
 	notification_label = Label.new()
 	notification_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	notification_label.position = Vector2(-300, 18)
-	notification_label.size = Vector2(600, 46)
+	notification_label.position = Vector2(-310, 16)
+	notification_label.size = Vector2(620, 48)
 	notification_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	notification_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	notification_label.add_theme_font_size_override("font_size", 15)
+	notification_label.add_theme_color_override("font_color", Color(0.94, 0.94, 0.90, 1.0))
 	notification_label.visible = false
+	var nstyle := StyleBoxFlat.new()
+	nstyle.bg_color = Color(0.05, 0.06, 0.07, 0.95)
+	nstyle.border_color = Color(0.48, 0.38, 0.20, 0.9)
+	nstyle.set_border_width_all(2)
+	nstyle.corner_radius_top_left = 6
+	nstyle.corner_radius_top_right = 6
+	nstyle.corner_radius_bottom_left = 6
+	nstyle.corner_radius_bottom_right = 6
+	nstyle.set_content_margin_all(12.0)
+	notification_label.add_theme_stylebox_override("normal", nstyle)
 	root.add_child(notification_label)
 	notification_timer = Timer.new()
 	notification_timer.one_shot = true
-	notification_timer.wait_time = 3.0
+	notification_timer.wait_time = 2.8
 	notification_timer.timeout.connect(_on_notification_timeout)
 	add_child(notification_timer)
 
@@ -228,9 +264,15 @@ func _build_journal(root: Control) -> void:
 	var box := VBoxContainer.new()
 	journal_panel.add_child(box)
 	var title := Label.new()
-	title.text = "FIELD JOURNAL // OBSERVATION -> HYPOTHESIS -> CONFIRMATION"
-	title.add_theme_font_size_override("font_size", 19)
+	title.text = "◆  FIELD JOURNAL"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(0.95, 0.78, 0.38, 1.0))
 	box.add_child(title)
+	var subtitle := Label.new()
+	subtitle.text = "Observation  →  Hypothesis  →  Confirmation"
+	subtitle.add_theme_font_size_override("font_size", 13)
+	subtitle.add_theme_color_override("font_color", Color(0.65, 0.70, 0.65, 1.0))
+	box.add_child(subtitle)
 	journal_text = RichTextLabel.new()
 	journal_text.bbcode_enabled = true
 	journal_text.custom_minimum_size = Vector2(750, 430)
@@ -248,8 +290,9 @@ func _build_settings(root: Control) -> void:
 	var main_box := VBoxContainer.new()
 	settings_panel.add_child(main_box)
 	var title := Label.new()
-	title.text = "IRONVEIL // SYSTEM SETTINGS"
-	title.add_theme_font_size_override("font_size", 20)
+	title.text = "◆  SYSTEM SETTINGS"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(0.95, 0.78, 0.38, 1.0))
 	main_box.add_child(title)
 	var tabs := TabContainer.new()
 	tabs.custom_minimum_size = Vector2(730, 475)
@@ -515,15 +558,19 @@ func _modal_panel(panel_size: Vector2) -> PanelContainer:
 
 func _panel_style(modal: bool) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.025, 0.032, 0.032, 0.97) if modal else Color(0.035, 0.043, 0.043, 0.91)
-	style.border_color = Color(0.50, 0.39, 0.20, 0.95) if modal else Color(0.26, 0.29, 0.27, 0.85)
+	# Cleaner industrial panel — less muddy, warmer brass accent on modals
+	style.bg_color = Color(0.03, 0.04, 0.045, 0.97) if modal else Color(0.05, 0.065, 0.07, 0.92)
+	style.border_color = Color(0.72, 0.55, 0.28, 0.95) if modal else Color(0.30, 0.34, 0.32, 0.80)
 	style.set_border_width_all(2 if modal else 1)
-	var radius: int = 7 if modal else 5
+	var radius: int = 8 if modal else 6
 	style.corner_radius_top_left = radius
 	style.corner_radius_top_right = radius
 	style.corner_radius_bottom_left = radius
 	style.corner_radius_bottom_right = radius
-	style.set_content_margin_all(20.0 if modal else 14.0)
+	style.set_content_margin_all(18.0 if modal else 12.0)
+	style.shadow_color = Color(0, 0, 0, 0.32)
+	style.shadow_size = 5 if modal else 2
+	style.shadow_offset = Vector2(0, 2)
 	return style
 
 func _wire_button(button: BaseButton) -> void:

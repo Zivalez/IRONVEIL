@@ -1,5 +1,11 @@
 extends CharacterBody3D
 
+## Player — hybrid mouse + keyboard + juice pass
+## Left click  = interact (or attack if no interactable / hold Shift)
+## Right click = attack
+## Mouse aim influences attack direction when possible
+## Keeps full keyboard support
+
 signal interaction_prompt_changed(text: String)
 
 const VisualFactory = preload("res://scripts/game/visual_factory.gd")
@@ -14,6 +20,8 @@ var _network_accumulator: float = 0.0
 var _sprite: Sprite3D
 var _sprint_stamina_accumulator: float = 0.0
 var _animation_time: float = 0.0
+var _hit_flash_time: float = 0.0
+var _attack_dir: Vector3 = Vector3.FORWARD
 
 const VOID_Y := -7.0
 const WORLD_MIN_X := -20.0
@@ -29,8 +37,24 @@ func _process(delta: float) -> void:
 	var sprinting: bool = Input.is_action_pressed("sprint") or InputProfile.sprint_held
 	var bob: float = 0.0 if reduced or not moving else absf(sin(_animation_time * (13.0 if sprinting else 9.0))) * 0.07
 	_sprite.position.y = 0.95 + bob
+
+	# Slight scale squash while moving (Sea of Stars / Doloc-ish life)
+	if not reduced and moving:
+		var squash: float = 1.0 + sin(_animation_time * (12.0 if sprinting else 8.0)) * 0.03
+		_sprite.scale = Vector3(1.0 / squash, squash, 1.0)
+	elif _hit_flash_time <= 0.0 and attack_cooldown <= 0.05:
+		_sprite.scale = _sprite.scale.lerp(Vector3.ONE, 1.0 - exp(-12.0 * delta))
+
 	if absf(velocity.x) > 0.1:
 		_sprite.flip_h = velocity.x < 0.0
+
+	# Hit flash decay
+	if _hit_flash_time > 0.0:
+		_hit_flash_time = maxf(_hit_flash_time - delta, 0.0)
+		if _sprite != null:
+			_sprite.modulate = Color(1.0, 0.55, 0.55) if fmod(_hit_flash_time * 18.0, 1.0) > 0.5 else Color.WHITE
+	elif _sprite != null and _sprite.modulate != Color.WHITE:
+		_sprite.modulate = _sprite.modulate.lerp(Color.WHITE, 1.0 - exp(-10.0 * delta))
 
 func _ready() -> void:
 	add_to_group("players")
@@ -92,6 +116,7 @@ func _on_simulation_tick(delta: float) -> void:
 		_recover_from_void()
 		return
 	_update_prompt()
+	_update_attack_dir_from_mouse()
 	_network_accumulator += delta
 	if _network_accumulator >= 0.10:
 		_network_accumulator = 0.0
@@ -120,6 +145,24 @@ func _consume_touch_actions() -> void:
 			GameState.use_medical("salve")
 
 func _unhandled_input(event: InputEvent) -> void:
+	# --- Hybrid mouse ---
+	if event is InputEventMouseButton and not InputProfile.is_touch_mode():
+		var mb: InputEventMouseButton = event as InputEventMouseButton
+		if mb.pressed:
+			if mb.button_index == MOUSE_BUTTON_LEFT:
+				# Prefer interact if something is in range, otherwise attack
+				if current_prompt != "":
+					_interact()
+				else:
+					_attack()
+				get_viewport().set_input_as_handled()
+				return
+			elif mb.button_index == MOUSE_BUTTON_RIGHT:
+				_attack()
+				get_viewport().set_input_as_handled()
+				return
+
+	# --- Keyboard (unchanged + still fully supported) ---
 	if event.is_action_pressed("interact"):
 		_interact()
 	elif event.is_action_pressed("attack"):
@@ -139,6 +182,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		SaveManager.save_game(self)
 	elif event.is_action_pressed("load"):
 		SaveManager.load_game(self)
+
+func _update_attack_dir_from_mouse() -> void:
+	if InputProfile.is_touch_mode() or camera_rig == null or camera_rig.camera == null:
+		if velocity.length() > 0.15:
+			_attack_dir = Vector3(velocity.x, 0.0, velocity.z).normalized()
+		return
+	var cam: Camera3D = camera_rig.camera
+	var mouse_pos: Vector2 = get_viewport().get_mouse_position()
+	var from: Vector3 = cam.project_ray_origin(mouse_pos)
+	var dir: Vector3 = cam.project_ray_normal(mouse_pos)
+	# Intersect with ground plane y ≈ player feet
+	var plane := Plane(Vector3.UP, global_position.y)
+	var hit: Variant = plane.intersects_ray(from, dir)
+	if hit is Vector3:
+		var to: Vector3 = (hit as Vector3) - global_position
+		to.y = 0.0
+		if to.length() > 0.2:
+			_attack_dir = to.normalized()
+			if absf(_attack_dir.x) > 0.1 and _sprite != null:
+				_sprite.flip_h = _attack_dir.x < 0.0
 
 func _nearest_interactable() -> Node:
 	var nearest: Node = null
@@ -169,6 +232,7 @@ func _interact() -> void:
 		return
 	if node.has_method("interact"):
 		node.interact(self)
+		_play_interact_juice()
 
 func _attack() -> void:
 	if attack_cooldown > 0.0:
@@ -178,28 +242,83 @@ func _attack() -> void:
 		return
 	var arm_penalty: float = 1.25 if GameState.injuries.has("left_arm") or GameState.injuries.has("right_arm") else 1.0
 	attack_cooldown = 0.55 * arm_penalty
+
+	# Attack juice — squash & stretch
 	if _sprite != null and not bool(SettingsManager.get_value("accessibility", "reduced_motion", false)):
 		var tween: Tween = create_tween()
-		tween.tween_property(_sprite, "scale", Vector3(1.14, 0.88, 1.0), 0.08)
-		tween.tween_property(_sprite, "scale", Vector3.ONE, 0.14)
+		tween.set_parallel(false)
+		tween.tween_property(_sprite, "scale", Vector3(1.22, 0.78, 1.0), 0.06).set_ease(Tween.EASE_OUT)
+		tween.tween_property(_sprite, "scale", Vector3(0.92, 1.12, 1.0), 0.07)
+		tween.tween_property(_sprite, "scale", Vector3.ONE, 0.12).set_ease(Tween.EASE_OUT)
+
+	# Camera shake on swing
+	if camera_rig != null and camera_rig.has_method("add_shake"):
+		camera_rig.add_shake(0.18, 0.12)
+
+	# Prefer enemy in attack direction, fallback to nearest
 	var closest: Node3D = null
-	var closest_distance: float = 2.2
+	var closest_distance: float = 2.4
+	var best_score: float = -999.0
 	for node_value in get_tree().get_nodes_in_group("enemy"):
 		if not (node_value is Node3D):
 			continue
 		var node: Node3D = node_value as Node3D
-		var d: float = global_position.distance_to(node.global_position)
-		if d < closest_distance:
+		var to_enemy: Vector3 = node.global_position - global_position
+		to_enemy.y = 0.0
+		var d: float = to_enemy.length()
+		if d > closest_distance:
+			continue
+		var dir_score: float = 0.0
+		if d > 0.05:
+			dir_score = to_enemy.normalized().dot(_attack_dir)
+		var score: float = (1.0 - d / closest_distance) + dir_score * 0.65
+		if score > best_score:
+			best_score = score
 			closest = node
 			closest_distance = d
+
 	if closest != null and closest.has_method("apply_damage"):
 		closest.apply_damage(18.0 if arm_penalty <= 1.0 else 13.0)
 		GameState.notify("Strike connected.", "info")
+		# Stronger feedback on hit
+		if camera_rig != null and camera_rig.has_method("add_shake"):
+			camera_rig.add_shake(0.42, 0.20)
+		_spawn_hit_spark(closest.global_position)
 	else:
 		GameState.notify("You swing through empty air.", "info")
 
+func _play_interact_juice() -> void:
+	if _sprite == null or bool(SettingsManager.get_value("accessibility", "reduced_motion", false)):
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(_sprite, "scale", Vector3(1.08, 0.94, 1.0), 0.05)
+	tween.tween_property(_sprite, "scale", Vector3.ONE, 0.10)
+
+func _spawn_hit_spark(at: Vector3) -> void:
+	# Lightweight procedural spark (no asset dependency)
+	var spark := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.12
+	mesh.height = 0.24
+	spark.mesh = mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.85, 0.35)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.7, 0.2)
+	mat.emission_energy_multiplier = 2.5
+	spark.material_override = mat
+	spark.global_position = at + Vector3(0, 0.9, 0)
+	get_tree().current_scene.add_child(spark)
+	var tw := spark.create_tween()
+	tw.tween_property(spark, "scale", Vector3(1.8, 1.8, 1.8), 0.08)
+	tw.tween_property(spark, "modulate", Color(1, 1, 1, 0), 0.18)
+	tw.tween_callback(spark.queue_free)
+
 func apply_damage(amount: float) -> void:
 	GameState.apply_damage(amount, "cut")
+	_hit_flash_time = 0.35
+	if camera_rig != null and camera_rig.has_method("add_shake"):
+		camera_rig.add_shake(0.55, 0.28)
 	if float(GameState.survival.get("health", 0.0)) <= 0.0:
 		GameState.notify("You collapsed. Knowledge remains; body returns to camp.", "error")
 		global_position = Vector3(0.0, 1.0, 0.0)
