@@ -47,25 +47,26 @@ func _build_ui() -> void:
 
 	var actions := Control.new()
 	actions.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	actions.position = Vector2(-278, -238)
-	actions.size = Vector2(258, 216)
+	# Lifted and spread so buttons don't stack on quick-nav / safe area
+	actions.position = Vector2(-300, -280)
+	actions.size = Vector2(280, 250)
 	actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_controls_root.add_child(actions)
-	var attack := _action_button("STRIKE", Vector2(146, 100), Vector2(104, 104), true)
+	var attack := _action_button("STRIKE", Vector2(160, 120), Vector2(100, 100), true)
 	attack.pressed.connect(_queue_action.bind("attack"))
 	actions.add_child(attack)
-	var interact := _action_button("USE", Vector2(56, 34), Vector2(92, 82), false)
+	var interact := _action_button("USE", Vector2(48, 40), Vector2(96, 84), false)
 	interact.pressed.connect(_queue_action.bind("interact"))
 	actions.add_child(interact)
-	var sprint := _action_button("RUN", Vector2(32, 128), Vector2(94, 72), false)
+	var sprint := _action_button("RUN", Vector2(28, 140), Vector2(100, 72), false)
 	sprint.button_down.connect(InputProfile.set_sprint.bind(true))
 	sprint.button_up.connect(InputProfile.set_sprint.bind(false))
 	actions.add_child(sprint)
 
 	var quick_bar := HBoxContainer.new()
 	quick_bar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	quick_bar.position = Vector2(-410, 18)
-	quick_bar.size = Vector2(392, 50)
+	quick_bar.position = Vector2(-420, 14)
+	quick_bar.size = Vector2(400, 48)
 	quick_bar.add_theme_constant_override("separation", 8)
 	quick_bar.mouse_filter = Control.MOUSE_FILTER_PASS
 	_controls_root.add_child(quick_bar)

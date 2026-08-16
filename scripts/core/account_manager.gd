@@ -7,6 +7,7 @@ signal world_loaded(world: Dictionary, snapshot: Dictionary)
 signal request_failed(message: String)
 signal checkpoint_saved(world: Dictionary)
 signal service_status_changed(online: bool, detail: String)
+signal admin_stats_received(stats: Dictionary)
 
 const SESSION_PATH := "user://ironveil_session.json"
 const DEFAULT_LOBBY_URL := "https://ironveil.zvlz.dev/api"
@@ -20,13 +21,18 @@ var pending_snapshot: Dictionary = {}
 var _request: HTTPRequest
 var _probe_request: HTTPRequest
 var _operation: String = ""
+var _admin_token: String = ""
 
 func _ready() -> void:
 	_request = HTTPRequest.new()
 	add_child(_request)
+	_request.accept_gzip = false
+	_request.timeout = 30.0
 	_request.request_completed.connect(_on_request_completed)
 	_probe_request = HTTPRequest.new()
 	add_child(_probe_request)
+	_probe_request.accept_gzip = false
+	_probe_request.timeout = 15.0
 	_probe_request.request_completed.connect(_on_probe_completed)
 	_load_session()
 
@@ -59,6 +65,28 @@ func register_account(nickname: String, password: String) -> void:
 
 func login(nickname: String, password: String) -> void:
 	_send("login", HTTPClient.METHOD_POST, "/auth/login", {"nickname": nickname, "password": password}, false)
+
+## Aliases used by title UI
+func register(nickname: String, password: String) -> void:
+	register_account(nickname, password)
+
+func sign_in(nickname: String, password: String) -> void:
+	login(nickname, password)
+
+func delete_world(world_id: String) -> void:
+	_send("delete_world", HTTPClient.METHOD_POST, "/worlds/%s/delete" % world_id, {}, true)
+
+func admin_stats(admin_token: String) -> void:
+	_admin_token = admin_token
+	_send("admin_stats", HTTPClient.METHOD_GET, "/admin/stats", {}, false)
+
+func admin_delete_world(admin_token: String, world_id: String) -> void:
+	_admin_token = admin_token
+	_send("admin_delete_world", HTTPClient.METHOD_POST, "/admin/worlds/%s/delete" % world_id, {}, false)
+
+func admin_delete_account(admin_token: String, account_id: String) -> void:
+	_admin_token = admin_token
+	_send("admin_delete_account", HTTPClient.METHOD_POST, "/admin/accounts/%s/delete" % account_id, {}, false)
 
 func logout() -> void:
 	if not session_token.is_empty():
@@ -109,12 +137,14 @@ func _send(operation: String, method: HTTPClient.Method, path: String, payload: 
 	if _request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
 		request_failed.emit("Another server request is still in progress.")
 		return
-	var headers := PackedStringArray(["Content-Type: application/json"])
+	var headers := PackedStringArray(["Content-Type: application/json", "Accept: application/json"])
 	if authenticated:
 		if session_token.is_empty():
 			request_failed.emit("Sign in to use persistent worlds.")
 			return
 		headers.append("Authorization: Bearer %s" % session_token)
+	if not _admin_token.is_empty() and operation.begins_with("admin_"):
+		headers.append("X-Admin-Token: %s" % _admin_token)
 	_operation = operation
 	var body: String = "" if method == HTTPClient.METHOD_GET else JSON.stringify(payload)
 	var error: Error = _request.request(api_url(path), headers, method, body)
@@ -133,6 +163,8 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		var fallback: String = "World service request failed (HTTP %d, result %d)." % [response_code, result]
 		if response_code == 0:
 			fallback = "Browser could not reach %s (network result %d)." % [api_url(""), result]
+		elif result == 8:
+			fallback = "API response decompress failed. Disable gzip on /api/ in nginx."
 		request_failed.emit(str(response.get("message", fallback)))
 		return
 	match operation:
@@ -167,6 +199,14 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			checkpoint_saved.emit(response.duplicate(true))
 		"invite":
 			GameState.notify("Shared-world invite: %s" % str(response.get("invite_code", "")), "success")
+		"delete_world":
+			list_worlds()
+			GameState.notify("World deleted.", "success")
+		"admin_stats":
+			admin_stats_received.emit(response.duplicate(true))
+		"admin_delete_world", "admin_delete_account":
+			admin_stats(_admin_token)
+			GameState.notify("Admin delete done.", "success")
 
 func _on_probe_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())

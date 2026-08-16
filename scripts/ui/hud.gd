@@ -576,7 +576,7 @@ func _wire_button(button: BaseButton) -> void:
 	button.button_down.connect(_on_ui_press)
 
 func _on_ui_hover() -> void:
-	AudioManager.play_ui("hover")
+	pass
 
 func _on_ui_press() -> void:
 	AudioManager.play_ui("press")
@@ -746,7 +746,9 @@ func _on_lobby_rooms_updated(rooms: Array) -> void:
 	room_list.clear()
 	for room in rooms:
 		if room is Dictionary:
-			room_list.add_item(str(room.get("name", "Room")))
+			var players := int(room.get("players", 0))
+			var max_p := int(room.get("max_players", 4))
+			room_list.add_item("%s   %d/%d online" % [str(room.get("name", "Room")), players, max_p])
 
 func _on_lobby_error(message: String) -> void:
 	if network_status_label != null:

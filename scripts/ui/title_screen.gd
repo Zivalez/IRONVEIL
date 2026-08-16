@@ -162,6 +162,12 @@ func _build_header(parent: VBoxContainer) -> void:
 	svc.add_child(_service_dot)
 	_service_text = _lab("CHECKING SERVICE", 12, MUTED)
 	svc.add_child(_service_text)
+	var admin_btn := Button.new()
+	admin_btn.text = "ADMIN"
+	admin_btn.custom_minimum_size = Vector2(72, 28)
+	_style_btn(admin_btn, "ghost")
+	admin_btn.pressed.connect(_open_admin)
+	row.add_child(admin_btn)
 	var build := _lab("1.4.0", 11, MUTED)
 	row.add_child(build)
 
@@ -320,6 +326,12 @@ func _build_world_panel(parent: Control) -> void:
 	_style_btn(_continue_button, "primary")
 	_continue_button.pressed.connect(_continue_world)
 	list_view.add_child(_continue_button)
+	var del_btn := Button.new()
+	del_btn.text = "DELETE SELECTED WORLD"
+	del_btn.custom_minimum_size = Vector2(0, 36)
+	_style_btn(del_btn, "ghost")
+	del_btn.pressed.connect(_delete_selected_world)
+	list_view.add_child(del_btn)
 	_mode_views.append(list_view)
 
 	# Create view
@@ -477,7 +489,6 @@ func _style_btn(button: Button, variant: String) -> void:
 	button.add_theme_stylebox_override("pressed", pressed)
 	button.add_theme_color_override("font_color", fg)
 	button.add_theme_color_override("font_hover_color", TEXT)
-	button.mouse_entered.connect(func() -> void: AudioManager.play_ui("hover"))
 	button.button_down.connect(func() -> void: AudioManager.play_ui("press"))
 
 func _style_item_list(list: ItemList) -> void:

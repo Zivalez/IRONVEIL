@@ -274,6 +274,90 @@ class PersistenceStore:
             raise StoreError("World not found or access denied.")
         return world
 
+    
+    def delete_world(self, account_id: str, world_id: str) -> dict[str, Any]:
+        with self.lock:
+            world = self.worlds.get(str(world_id))
+            if world is None:
+                raise StoreError("World not found.")
+            if world.get("owner_id") != account_id:
+                raise StoreError("Only the world owner can delete it.")
+            self._purge_world(str(world_id))
+            self._save()
+            return {"ok": True, "deleted": str(world_id)}
+
+    def admin_stats(self) -> dict[str, Any]:
+        with self.lock:
+            return {
+                "ok": True,
+                "accounts": len(self.accounts),
+                "worlds": len(self.worlds),
+                "sessions": len(self.sessions),
+                "invites": len(self.invites),
+                "account_list": [
+                    {
+                        "id": a.get("id"),
+                        "nickname": a.get("nickname"),
+                        "created_at": a.get("created_at"),
+                    }
+                    for a in self.accounts.values()
+                ],
+                "world_list": [
+                    {
+                        "id": w.get("id"),
+                        "name": w.get("name"),
+                        "kind": w.get("kind"),
+                        "owner_id": w.get("owner_id"),
+                        "members": len(w.get("members", [])),
+                        "checkpoint_index": w.get("checkpoint_index", 0),
+                    }
+                    for w in self.worlds.values()
+                ],
+            }
+
+    def admin_delete_world(self, world_id: str) -> dict[str, Any]:
+        with self.lock:
+            if str(world_id) not in self.worlds:
+                raise StoreError("World not found.")
+            self._purge_world(str(world_id))
+            self._save()
+            return {"ok": True, "deleted": str(world_id)}
+
+    def admin_delete_account(self, account_id: str) -> dict[str, Any]:
+        with self.lock:
+            if str(account_id) not in self.accounts:
+                raise StoreError("Account not found.")
+            # delete owned worlds
+            owned = [wid for wid, w in self.worlds.items() if w.get("owner_id") == account_id]
+            for wid in owned:
+                self._purge_world(wid)
+            # remove from member lists
+            for w in self.worlds.values():
+                members = list(w.get("members", []))
+                if account_id in members:
+                    w["members"] = [m for m in members if m != account_id]
+            # sessions
+            drop = [k for k, s in self.sessions.items() if str(s.get("account_id")) == account_id]
+            for k in drop:
+                self.sessions.pop(k, None)
+            self.accounts.pop(str(account_id), None)
+            self._save()
+            return {"ok": True, "deleted": str(account_id), "worlds_removed": len(owned)}
+
+    def _purge_world(self, world_id: str) -> None:
+        world = self.worlds.pop(world_id, None)
+        # drop invites for this world
+        drop_inv = [k for k, inv in self.invites.items() if str(inv.get("world_id")) == world_id]
+        for k in drop_inv:
+            self.invites.pop(k, None)
+        if world is not None:
+            index = int(world.get("checkpoint_index", 0))
+            for i in range(max(0, index - 10), index + 2):
+                try:
+                    self._checkpoint_path(world_id, i).unlink(missing_ok=True)
+                except Exception:
+                    pass
+
     def load_world(self, account_id: str, world_id: str) -> dict[str, Any]:
         with self.lock:
             world = self._member_world(account_id, world_id)

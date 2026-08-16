@@ -44,6 +44,7 @@ TRUST_PROXY_HEADERS = os.getenv("TRUST_PROXY_HEADERS", "false").lower() in {"1",
 ROOM_TTL_SECONDS = max(300, int(os.getenv("ROOM_TTL_SECONDS", "21600")))
 RESERVATION_TTL_SECONDS = max(15, int(os.getenv("RESERVATION_TTL_SECONDS", "120")))
 DATA_PATH = Path(os.getenv("LOBBY_DATA_PATH", "/data/rooms.json"))
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "").strip()
 
 SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9 _\-\.]")
 
@@ -201,7 +202,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = urlparse(self.path).path
         if path == "/health":
-            self.json_response(HTTPStatus.OK, {"ok": True, "rooms": len(STATE.rooms), "max_rooms": MAX_ACTIVE_ROOMS})
+            with STATE.lock:
+                room_summaries = [room.public_dict() for room in STATE.rooms.values()]
+            self.json_response(HTTPStatus.OK, {
+                "ok": True,
+                "rooms": len(STATE.rooms),
+                "max_rooms": MAX_ACTIVE_ROOMS,
+                "room_list": room_summaries,
+            })
             return
         if path == "/rooms":
             with STATE.lock:
@@ -279,6 +287,40 @@ class Handler(BaseHTTPRequestHandler):
             if body is not None:
                 self.store_response(lambda: PERSISTENCE.join_invite(account["id"], body.get("invite_code")))
             return
+        
+        if path == "/admin/stats":
+            if not self.require_admin():
+                return
+            with STATE.lock:
+                room_summaries = [room.public_dict() for room in STATE.rooms.values()]
+            stats = PERSISTENCE.admin_stats()
+            stats["live_rooms"] = room_summaries
+            stats["live_room_count"] = len(STATE.rooms)
+            self.json_response(HTTPStatus.OK, stats)
+            return
+
+        match = re.fullmatch(r"/admin/worlds/([A-Za-z0-9\-]+)/delete", path)
+        if match:
+            if not self.require_admin():
+                return
+            self.store_response(lambda: PERSISTENCE.admin_delete_world(match.group(1)))
+            return
+
+        match = re.fullmatch(r"/admin/accounts/([A-Za-z0-9\-]+)/delete", path)
+        if match:
+            if not self.require_admin():
+                return
+            self.store_response(lambda: PERSISTENCE.admin_delete_account(match.group(1)))
+            return
+
+        match = re.fullmatch(r"/worlds/([A-Za-z0-9\-]+)/delete", path)
+        if match:
+            account = self.require_account()
+            if account is None:
+                return
+            self.store_response(lambda: PERSISTENCE.delete_world(account["id"], match.group(1)))
+            return
+
         match = re.fullmatch(r"/worlds/([A-Za-z0-9\-]+)/checkpoint", path)
         if match:
             account = self.require_account()
@@ -424,6 +466,13 @@ class Handler(BaseHTTPRequestHandler):
     def bearer_token(self) -> str:
         value = self.headers.get("Authorization", "")
         return value[7:].strip() if value.startswith("Bearer ") else ""
+
+    def require_admin(self) -> bool:
+        token = (self.headers.get("X-Admin-Token") or "").strip()
+        if not ADMIN_TOKEN or not token or token != ADMIN_TOKEN:
+            self.json_response(HTTPStatus.UNAUTHORIZED, {"message": "Admin token required or invalid."})
+            return False
+        return True
 
     def require_account(self) -> dict[str, Any] | None:
         account = PERSISTENCE.authenticate(self.bearer_token())
