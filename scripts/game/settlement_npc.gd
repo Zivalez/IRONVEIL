@@ -1,5 +1,8 @@
 extends Node3D
 
+var _anim_t: float = 0.0
+var _sprite_ref: Sprite3D
+
 const VisualFactory = preload("res://scripts/game/visual_factory.gd")
 
 var npc_id: String = "mara"
@@ -49,3 +52,14 @@ func interact(_player: Node) -> void:
 		GameState.set_flag("phase3_mvp_complete", true)
 		GameState.advance_objective(21)
 	GameState.notify("Barter completed with %s." % str(definition.get("name", npc_id)), "success")
+
+
+func _process(delta: float) -> void:
+	if _sprite_ref == null:
+		for c in get_children():
+			if c is Sprite3D:
+				_sprite_ref = c as Sprite3D
+				break
+	if _sprite_ref != null and SettingsManager.juice_enabled("walk_bob"):
+		_anim_t += delta
+		_sprite_ref.position.y = 0.9 + sin(_anim_t * 2.0) * 0.04 * SettingsManager.juice_intensity()

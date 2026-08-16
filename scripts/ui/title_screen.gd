@@ -1,3 +1,4 @@
+## Title screen — visual polish pass 1.4
 extends CanvasLayer
 
 signal start_requested()

@@ -120,15 +120,15 @@ func _create_river_and_bridge() -> void:
 	add_child(bridge)
 
 func _build_forest() -> void:
-	for i in range(31):
-		var x: float = -8.0 + float((i * 7) % 38)
-		var z: float = -16.0 + float((i * 11) % 32)
+	for i in range(48):
+		var x: float = -10.0 + float((i * 7) % 42)
+		var z: float = -17.0 + float((i * 11) % 34)
 		if (x > 8.0 and x < 25.0 and absf(z) < 8.0) or absf(x - 28.0) < 5.0:
 			continue
 		_create_tree(Vector3(x, 0.0, z), 0.82 + float(i % 4) * 0.08)
-	for i in range(12):
+	for i in range(28):
 		var grass: Sprite3D = VisualFactory.make_sprite("res://assets/pixel/grass.png", 0.032, true)
-		grass.position = Vector3(-5.0 + float((i * 13) % 29), 0.35, -12.0 + float((i * 17) % 24))
+		grass.position = Vector3(-6.0 + float((i * 13) % 34), 0.35, -14.0 + float((i * 17) % 28))
 		add_child(grass)
 
 func _build_workshop() -> void:
@@ -217,33 +217,64 @@ func _build_foundry() -> void:
 		add_child(foundry_light)
 
 func _spawn_world_resources() -> void:
+	# Green Hollow denser forage
 	_spawn_pickup("wild_berries", 3, Vector3(3.5, 0.0, 2.0))
+	_spawn_pickup("wild_berries", 2, Vector3(-2.0, 0.0, 6.0))
+	_spawn_pickup("wild_berries", 2, Vector3(12.0, 0.0, -8.0))
 	_spawn_pickup("spring_water", 2, Vector3(5.0, 0.0, -3.0))
+	_spawn_pickup("spring_water", 2, Vector3(1.0, 0.0, 4.5))
 	_spawn_pickup("scrap", 1, Vector3(7.0, 0.0, -2.0))
 	_spawn_pickup("scrap", 1, Vector3(8.0, 0.0, -4.0))
 	_spawn_pickup("scrap", 1, Vector3(10.0, 0.0, -6.0))
 	_spawn_pickup("scrap", 1, Vector3(22.0, 0.0, -6.2))
+	_spawn_pickup("scrap", 1, Vector3(14.0, 0.0, 7.0))
 	_spawn_pickup("log", 2, Vector3(5.0, 0.0, 5.0))
 	_spawn_pickup("log", 2, Vector3(9.0, 0.0, 4.0))
-	# Phase-2 press stock after the original wheel + gear costs have been paid.
+	_spawn_pickup("log", 1, Vector3(-4.0, 0.0, -5.0))
+	_spawn_pickup("log", 2, Vector3(18.0, 0.0, 8.0))
+	# Ashwick / route stock
 	_spawn_pickup("scrap", 2, Vector3(38.0, 0.0, -2.0))
 	_spawn_pickup("scrap", 2, Vector3(46.0, 0.0, 2.0))
+	_spawn_pickup("scrap", 2, Vector3(52.0, 0.0, -5.0))
+	_spawn_pickup("scrap", 1, Vector3(60.0, 0.0, 3.0))
+	_spawn_pickup("log", 2, Vector3(42.0, 0.0, 6.0))
+	# Later regions light scatter so path never feels empty
+	_spawn_pickup("scrap", 2, Vector3(110.0, 0.0, -3.0))
+	_spawn_pickup("scrap", 2, Vector3(148.0, 0.0, 4.0))
+	_spawn_pickup("scrap", 2, Vector3(195.0, 0.0, -2.0))
+	_spawn_pickup("scrap", 2, Vector3(252.0, 0.0, 3.0))
 
 func _spawn_world_enemies() -> void:
 	_spawn_enemy("hollow_vermin", Vector3(6.0, 0.7, -7.0))
+	_spawn_enemy("hollow_vermin", Vector3(11.0, 0.7, 8.0))
 	_spawn_enemy("hollow_vermin", Vector3(34.0, 0.7, 9.0))
+	_spawn_enemy("hollow_vermin", Vector3(40.0, 0.7, -8.0))
 	_spawn_enemy("hollow_stalker", Vector3(48.0, 0.7, -6.0))
 	_spawn_enemy("hollow_stalker", Vector3(59.0, 0.7, 5.5))
+	_spawn_enemy("hollow_stalker", Vector3(72.0, 0.7, -4.0))
+	_spawn_enemy("hollow_vermin", Vector3(115.0, 0.7, 6.0))
+	_spawn_enemy("hollow_stalker", Vector3(155.0, 0.7, -5.0))
+	_spawn_enemy("hollow_vermin", Vector3(200.0, 0.7, 4.0))
 
 func _spawn_atmosphere() -> void:
+	# Base fields (AmbientLife adds regional density on top)
 	var dust = ParticleFieldScript.new()
 	dust.position = Vector3(12.0, 0.0, 0.0)
-	dust.configure("res://assets/pixel/dust.png", 22, Vector3(42.0, 4.0, 32.0), Vector3(0.05, 0.08, 0.02), 0.024)
+	dust.configure("res://assets/pixel/dust.png", 30, Vector3(42.0, 4.0, 32.0), Vector3(0.05, 0.08, 0.02), 0.024)
 	add_child(dust)
 	var steam = ParticleFieldScript.new()
 	steam.position = Vector3(68.0, 0.0, 0.0)
-	steam.configure("res://assets/pixel/steam.png", 18, Vector3(24.0, 5.0, 22.0), Vector3(0.03, 0.18, 0.01), 0.028)
+	steam.configure("res://assets/pixel/steam.png", 24, Vector3(24.0, 5.0, 22.0), Vector3(0.03, 0.18, 0.01), 0.028)
 	add_child(steam)
+	var embers = ParticleFieldScript.new()
+	embers.position = Vector3(90.0, 0.5, 0.0)
+	embers.configure("res://assets/pixel/spark.png", 14, Vector3(18.0, 6.0, 16.0), Vector3(0.02, 0.22, 0.01), 0.022)
+	add_child(embers)
+	# Extra grass clusters for life along path
+	for i in range(24):
+		var grass: Sprite3D = VisualFactory.make_sprite("res://assets/pixel/grass.png", 0.034, true)
+		grass.position = Vector3(-6.0 + float((i * 17) % 80), 0.32, -14.0 + float((i * 23) % 28))
+		add_child(grass)
 
 func _build_phase3_regions() -> void:
 	_build_region_zones()
